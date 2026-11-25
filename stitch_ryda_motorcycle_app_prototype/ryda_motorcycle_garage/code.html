@@ -1,0 +1,305 @@
+<!DOCTYPE html><html lang="en" class="dark"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RYDA — Motorcycle Garage</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'accent': '#FF6B35',
+        'telemetry': '#00E5FF',
+        'success': '#10B981',
+        'warning': '#F59E0B',
+        'error': '#EF4444',
+        'border': '#30333A',
+        'subtle-border': '#252830',
+        'dark-surface': '#101114',
+        'dark-surface-elevated': '#0D0F12',
+        'dark-on-surface': '#F5F5F5',
+        'dark-surface-container': '#191B20',
+        'dark-on-surface-container': '#9A9DA5',
+        'dark-surface-container-high': '#22252B',
+        'dark-on-surface-container-high': '#F5F5F5',
+        'on-accent': '#101114',
+      },
+      borderRadius: {
+        'xs': '4px',
+        'sm': '6px',
+        'DEFAULT': '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        'pill': '9999px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-base': '16px',
+        'gutter-lg': '20px',
+        'gutter-xl': '24px',
+        'section': '32px',
+        'page-margin': '16px',
+        'dock-height': '64px',
+      },
+      fontFamily: {
+        'headline': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'body': ['"Instrument Sans"', 'sans-serif'],
+        'label': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'stat': ['"Source Code Pro"', 'monospace', 'sans-serif'],
+      },
+      fontSize: {
+        'xs': ['12px', { lineHeight: '16px' }],
+        'sm': ['14px', { lineHeight: '20px' }],
+        'base': ['16px', { lineHeight: '24px' }],
+        'lg': ['18px', { lineHeight: '26px' }],
+        'xl': ['20px', { lineHeight: '28px' }],
+        '2xl': ['24px', { lineHeight: '32px' }],
+        '3xl': ['30px', { lineHeight: '36px' }],
+        'display-lg': ['40px', { lineHeight: '48px', letterSpacing: '-0.5px', fontWeight: '800' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.3px', fontWeight: '800' }],
+        'headline-xl': ['36px', { lineHeight: '44px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'headline-xl-mobile': ['28px', { lineHeight: '34px', letterSpacing: '-0.25px', fontWeight: '700' }],
+        'headline-lg': ['28px', { lineHeight: '36px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-lg-mobile': ['24px', { lineHeight: '32px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-md': ['20px', { lineHeight: '28px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'headline-sm': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '600' }],
+        'body-lg': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.1px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.2px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.4px', fontWeight: '600' }],
+        'stat-metric': ['32px', { lineHeight: '36px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'stat-metric-mobile': ['28px', { lineHeight: '32px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'stat-unit': ['12px', { lineHeight: '16px', letterSpacing: '0.5px', fontWeight: '700' }],
+      },
+      transitionDuration: {
+        'tap-press': '120ms',
+        'control-expand': '200ms',
+        'sheet-slide': '300ms',
+        'badge-unlock': '600ms',
+      },
+      transitionTimingFunction: {
+        'tap-press': 'cubic-bezier(0.2, 0.8, 0.4, 1)',
+        'control-expand': 'cubic-bezier(0.0, 0.0, 0.2, 1)',
+        'sheet-slide': 'cubic-bezier(0.2, 0.9, 0.3, 1)',
+        'badge-unlock': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;family=Source+Code+Pro:wght@600;700;800&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-dark-surface text-dark-on-surface antialiased select-none font-body">
+
+  <div class="w-full max-w-[390px] mx-auto min-h-[884px] bg-dark-surface border-x border-border flex flex-col justify-between relative overflow-hidden pb-10" data-stitch-vh="min-h-[884px]===min-h-screen">
+
+    <!-- Top Header -->
+    <header class="sticky top-0 z-30 bg-dark-surface/95 backdrop-blur-sm border-b border-border px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="../home-dashboard/HomeDashboard.html" class="w-9 h-9 rounded-xl bg-dark-surface-container border border-border flex items-center justify-center text-white hover:text-accent active:scale-95 transition">
+          <span class="material-symbols-outlined text-lg">arrow_back</span>
+        </a>
+        <div>
+          <h1 class="font-headline text-headline-sm text-white">Motorcycle Garage</h1>
+          <p class="text-[11px] font-body text-dark-on-surface-container">2 Machines in Stable • Personal Fleet</p>
+        </div>
+      </div>
+
+      <!-- Add Motorcycle Action -->
+      <button type="button" onclick="openAddMotorcycleModal()" class="px-3 py-1.5 rounded-xl bg-accent hover:bg-orange-500 text-white font-label text-xs font-semibold flex items-center gap-1 active:scale-95 transition shadow-md shadow-orange-950/40">
+        <span class="material-symbols-outlined text-sm">add</span>
+        <span>Add Bike</span>
+      </button>
+    </header>
+
+    <!-- Garage Cards Content -->
+    <main class="flex-1 px-4 py-4 space-y-4 overflow-y-auto no-scrollbar">
+
+      <!-- MOTORCYCLE 1 (PRIMARY RIDE) -->
+      <article class="bg-dark-surface-container border border-accent/40 rounded-2xl p-4 relative overflow-hidden shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-label text-[11px] font-bold border border-emerald-500/30 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Primary Ride
+            </span>
+            <span class="font-stat text-xs text-dark-on-surface-container">MH-02-EE-4509</span>
+          </div>
+          <span class="font-label text-xs text-dark-on-surface-container font-semibold">452 cc</span>
+        </div>
+
+        <!-- Motorcycle Photo Preview -->
+        <div class="w-full h-40 rounded-xl overflow-hidden mb-3 bg-[#171A21] border border-border/80 relative">
+          <img src="https://lh3.googleusercontent.com/aida/ALJJyrA7xrUvabTT0HkXtxJ7lfYH0B5wXyfhQWYrWZ0IcDCkmsqWkTOmk7FhH8zwjN4kJsguts4KASVZtQX3Z0W9n2LVhMHn2Og5WJ1n2ZLrhlNhqu-CMGxY_E4AZTt4F5UGB9u4rCeaedbGih130-_6tA-GPoX92F-AfQ5k_WnLdWB1zJrhdZ-qwYE2jQgCA3v6c592Xu4HU6TWO3r5sO5ZdVXiz55cZSjvrM5pZSdXykNz9BOQo9b46yAU" alt="Royal Enfield Himalayan 450" class="w-full h-full object-cover">
+          <div class="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-label text-white">
+            Nickname: &#34;Sherpa&#34;
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <h2 class="font-headline text-headline-sm text-white">Royal Enfield Himalayan 450</h2>
+          <p class="font-body text-xs text-dark-on-surface-container">Variant: Kamet White • Tubeless Spoke Wheels</p>
+        </div>
+
+        <!-- Telemetry Mileage Breakdown -->
+        <div class="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-dark-surface border border-subtle-border mb-3 text-center">
+          <div>
+            <span class="text-[10px] font-label text-dark-on-surface-container block">Mileage Logged</span>
+            <span class="font-stat text-base font-bold text-white">4,280 <span class="text-[10px] text-accent">KM</span></span>
+          </div>
+          <div>
+            <span class="text-[10px] font-label text-dark-on-surface-container block">Rides Logged</span>
+            <span class="font-stat text-base font-bold text-white">46</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-label text-dark-on-surface-container block">Saddle Time</span>
+            <span class="font-stat text-base font-bold text-telemetry">94 HRS</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2 border-t border-border/60">
+          <button type="button" class="flex-1 py-2 px-3 rounded-lg bg-dark-surface-container-high hover:bg-zinc-800 text-white font-label text-xs transition">
+            Ride History (46)
+          </button>
+          <button type="button" class="py-2 px-3 rounded-lg bg-dark-surface-container-high hover:bg-zinc-800 text-dark-on-surface hover:text-white font-label text-xs transition">
+            Edit
+          </button>
+        </div>
+      </article>
+
+      <!-- MOTORCYCLE 2 -->
+      <article class="bg-dark-surface-container border border-border rounded-2xl p-4 relative overflow-hidden shadow-lg">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <button onclick="setAsPrimary(this)" class="px-2.5 py-0.5 rounded-full bg-zinc-800 text-dark-on-surface-container hover:text-white font-label text-[11px] border border-border">
+              Make Primary
+            </button>
+            <span class="font-stat text-xs text-dark-on-surface-container">MH-02-CB-8821</span>
+          </div>
+          <span class="font-label text-xs text-dark-on-surface-container font-semibold">334 cc</span>
+        </div>
+
+        <!-- Motorcycle Photo Preview -->
+        <div class="w-full h-40 rounded-xl overflow-hidden mb-3 bg-[#171A21] border border-border/80 relative">
+          <img src="https://lh3.googleusercontent.com/aida/ALJJyrAJNmsjnwefUE0AhUYySmdMzuAp4x9Chx23-zrfO7b4xAx4bCb5zyRjKpTsR443Uqqapoawh3k5WTJf9Pjzdvjr5qBjMuV3TxAvVWgU-oHFSU68bjObMPIei5KP-j4JENYH_fBELknPOHVuTH7u2jNYPYc3AW_f43ZlP2tQ9HjuAlpa8lBIhI4Nq8W4EMyl2HH9IUDQuSzxOdwW98dg2EhX9-2qcxhyngxnj3gvDrQWCqW_5A" alt="Yezdi Roadster" class="w-full h-full object-cover">
+          <div class="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-label text-white">
+            Nickname: &#34;Blackout&#34;
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <h2 class="font-headline text-headline-sm text-white">Yezdi Roadster Dual-Tone</h2>
+          <p class="font-body text-xs text-dark-on-surface-container">Variant: Dark Edition • City &amp; Coastal Cruiser</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-dark-surface border border-subtle-border mb-3 text-center">
+          <div>
+            <span class="text-[10px] font-label text-dark-on-surface-container block">Mileage Logged</span>
+            <span class="font-stat text-base font-bold text-white">2,562 <span class="text-[10px] text-accent">KM</span></span>
+          </div>
+          <div>
+            <span class="text-[10px] font-label text-dark-on-surface-container block">Rides Logged</span>
+            <span class="font-stat text-base font-bold text-white">12</span>
+          </div>
+          <div>
+            <span class="text-[10px] font-label text-dark-on-surface-container block">Saddle Time</span>
+            <span class="font-stat text-base font-bold text-telemetry">54 HRS</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2 border-t border-border/60">
+          <button type="button" class="flex-1 py-2 px-3 rounded-lg bg-dark-surface-container-high hover:bg-zinc-800 text-white font-label text-xs transition">
+            Ride History (12)
+          </button>
+          <button type="button" class="py-2 px-3 rounded-lg bg-dark-surface-container-high hover:bg-zinc-800 text-dark-on-surface hover:text-white font-label text-xs transition">
+            Edit
+          </button>
+        </div>
+      </article>
+
+    </main>
+
+    <!-- Add Motorcycle Bottom Sheet Modal (Mockup) -->
+    <div id="add-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex flex-col justify-end">
+      <div class="w-full max-w-[390px] mx-auto bg-dark-surface-container border-t border-border rounded-t-3xl p-5 shadow-2xl space-y-3.5">
+        <div class="w-12 h-1 rounded-full bg-zinc-700 mx-auto"></div>
+        <div class="flex items-center justify-between pb-2 border-b border-border">
+          <h3 class="font-headline text-headline-sm text-white">Add Motorcycle to Garage</h3>
+          <button onclick="closeAddMotorcycleModal()" class="text-dark-on-surface-container hover:text-white">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="font-label text-dark-on-surface-container block mb-1">Manufacturer</label>
+            <select class="w-full bg-dark-surface border border-subtle-border rounded-xl p-2.5 text-white outline-none">
+              <option>KTM</option>
+              <option>Royal Enfield</option>
+              <option>Yezdi / Jawa</option>
+              <option>Triumph</option>
+              <option>Honda</option>
+              <option>TVS</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="font-label text-dark-on-surface-container block mb-1">Model &amp; Variant</label>
+            <input type="text" placeholder="e.g. Duke 390 Gen 3" class="w-full bg-dark-surface border border-subtle-border rounded-xl p-2.5 text-white outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="font-label text-dark-on-surface-container block mb-1">Engine Capacity (cc)</label>
+              <input type="text" placeholder="e.g. 399 cc" class="w-full bg-dark-surface border border-subtle-border rounded-xl p-2.5 text-white outline-none">
+            </div>
+            <div>
+              <label class="font-label text-dark-on-surface-container block mb-1">Nickname</label>
+              <input type="text" placeholder="e.g. Orange Beast" class="w-full bg-dark-surface border border-subtle-border rounded-xl p-2.5 text-white outline-none">
+            </div>
+          </div>
+
+          <button onclick="submitNewMotorcycle()" class="w-full py-3 rounded-xl bg-accent text-white font-headline font-bold text-xs shadow-lg shadow-orange-950/60 mt-2">
+            SAVE MOTORCYCLE
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function openAddMotorcycleModal() {
+      document.getElementById('add-modal').classList.remove('hidden');
+    }
+    function closeAddMotorcycleModal() {
+      document.getElementById('add-modal').classList.add('hidden');
+    }
+    function submitNewMotorcycle() {
+      alert("New motorcycle added to your garage!");
+      closeAddMotorcycleModal();
+    }
+    function setAsPrimary(btn) {
+      btn.textContent = 'Primary Ride';
+      btn.classList.add('bg-emerald-500/20', 'text-emerald-400');
+    }
+  </script>
+
+
+</body></html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html><html lang="en" class="dark"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RYDA — Rider Profile &amp; Achievements</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'accent': '#FF6B35',
+        'telemetry': '#00E5FF',
+        'success': '#10B981',
+        'warning': '#F59E0B',
+        'error': '#EF4444',
+        'border': '#30333A',
+        'subtle-border': '#252830',
+        'dark-surface': '#101114',
+        'dark-surface-elevated': '#0D0F12',
+        'dark-on-surface': '#F5F5F5',
+        'dark-surface-container': '#191B20',
+        'dark-on-surface-container': '#9A9DA5',
+        'dark-surface-container-high': '#22252B',
+        'dark-on-surface-container-high': '#F5F5F5',
+        'on-accent': '#101114',
+      },
+      borderRadius: {
+        'xs': '4px',
+        'sm': '6px',
+        'DEFAULT': '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        'pill': '9999px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-base': '16px',
+        'gutter-lg': '20px',
+        'gutter-xl': '24px',
+        'section': '32px',
+        'page-margin': '16px',
+        'dock-height': '64px',
+      },
+      fontFamily: {
+        'headline': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'body': ['"Instrument Sans"', 'sans-serif'],
+        'label': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'stat': ['"Source Code Pro"', 'monospace', 'sans-serif'],
+      },
+      fontSize: {
+        'xs': ['12px', { lineHeight: '16px' }],
+        'sm': ['14px', { lineHeight: '20px' }],
+        'base': ['16px', { lineHeight: '24px' }],
+        'lg': ['18px', { lineHeight: '26px' }],
+        'xl': ['20px', { lineHeight: '28px' }],
+        '2xl': ['24px', { lineHeight: '32px' }],
+        '3xl': ['30px', { lineHeight: '36px' }],
+        'display-lg': ['40px', { lineHeight: '48px', letterSpacing: '-0.5px', fontWeight: '800' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.3px', fontWeight: '800' }],
+        'headline-xl': ['36px', { lineHeight: '44px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'headline-xl-mobile': ['28px', { lineHeight: '34px', letterSpacing: '-0.25px', fontWeight: '700' }],
+        'headline-lg': ['28px', { lineHeight: '36px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-lg-mobile': ['24px', { lineHeight: '32px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-md': ['20px', { lineHeight: '28px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'headline-sm': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '600' }],
+        'body-lg': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.1px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.2px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.4px', fontWeight: '600' }],
+        'stat-metric': ['32px', { lineHeight: '36px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'stat-metric-mobile': ['28px', { lineHeight: '32px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'stat-unit': ['12px', { lineHeight: '16px', letterSpacing: '0.5px', fontWeight: '700' }],
+      },
+      transitionDuration: {
+        'tap-press': '120ms',
+        'control-expand': '200ms',
+        'sheet-slide': '300ms',
+        'badge-unlock': '600ms',
+      },
+      transitionTimingFunction: {
+        'tap-press': 'cubic-bezier(0.2, 0.8, 0.4, 1)',
+        'control-expand': 'cubic-bezier(0.0, 0.0, 0.2, 1)',
+        'sheet-slide': 'cubic-bezier(0.2, 0.9, 0.3, 1)',
+        'badge-unlock': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;family=Source+Code+Pro:wght@600;700;800&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-dark-surface text-dark-on-surface antialiased select-none font-body">
+
+  <div class="w-full max-w-[390px] mx-auto min-h-[884px] bg-dark-surface border-x border-border flex flex-col justify-between relative overflow-hidden pb-20" data-stitch-vh="min-h-[884px]===min-h-screen">
+
+    <!-- Top Profile Header & Cover -->
+    <div class="relative">
+      <!-- Cover Banner -->
+      <div class="w-full h-32 bg-gradient-to-r from-zinc-900 via-zinc-800 to-zinc-900 relative overflow-hidden border-b border-border">
+        <img src="https://lh3.googleusercontent.com/aida/ALJJyrBm9yy_hjMJIXsP-3RVcvJTM1yhp-Q_wb0Q1tTiZ1uBsOYCsdm9sTtV-YrdSpYmCoCx1YoNPEiEm_kW89ENbpNT0oW6-Grjk_mHxr_vQ4N0qGLxcmABF414KjiOQi0VCXGI19QfXoVpQNB-w9dIZMlHUJa5JiWHNiy48lxXHvEr2yhcDAtLZEtzwWKM9MqZwaOUWVAOaTFs4nZxp1Ll8vtaccngMD5CtXH27pkmGbSlRZMvTZsj7hhSlxFb2Tlh" alt="Cover" class="w-full h-full object-cover opacity-40">
+        <div class="absolute inset-0 bg-gradient-to-t from-dark-surface via-transparent to-transparent"></div>
+        
+        <!-- Top Navigation buttons over cover -->
+        <div class="absolute top-3 left-4 right-4 flex items-center justify-between z-10">
+          <a href="../home-dashboard/HomeDashboard.html" class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:text-accent">
+            <span class="material-symbols-outlined text-base">arrow_back</span>
+          </a>
+          <div class="flex items-center gap-2">
+            <button class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:text-accent">
+              <span class="material-symbols-outlined text-base">share</span>
+            </button>
+            <button class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:text-accent">
+              <span class="material-symbols-outlined text-base">settings</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Avatar & Identity Info Block -->
+      <div class="px-4 relative -mt-10 flex items-end justify-between">
+        <div class="relative">
+          <div class="w-20 h-20 rounded-2xl overflow-hidden border-2 border-accent bg-dark-surface shadow-2xl">
+            <img src="https://lh3.googleusercontent.com/aida/ALJJyrC6z6YK4wzVNPTYUXvdYHd0xUxl3HOUqn3XIP1jNgV4g5XH8B2bAYCGK8fYiCEEgJYx191NGhpoiqYaLB2OdwlxR1TOps8XojzyG8H6tiiI6fibucUy-zfYDNk8GdKUnD590ovlyxeYrKqSw9A_k6a9cvi0W2PyKLFpGv_5K4P79aiUb7oIhF88OeQb54mYgKc66iEQyHvOZaODBUYW6x7b-UvOzbrTg-ZYFILfUGbctafB2Yw" alt="Kabir Mehta" class="w-full h-full object-cover">
+          </div>
+          <span class="absolute -bottom-1 -right-1 p-1 rounded-full bg-accent text-white flex items-center justify-center ring-2 ring-dark-surface" title="Verified Rider">
+            <span class="material-symbols-outlined text-[10px]">verified</span>
+          </span>
+        </div>
+
+        <!-- Edit Profile Button -->
+        <button class="px-4 py-1.5 rounded-xl bg-dark-surface-container border border-border text-xs font-label text-white hover:border-zinc-500 transition active:scale-95">
+          Edit Profile
+        </button>
+      </div>
+
+      <!-- Name & Bio -->
+      <div class="px-4 mt-2.5">
+        <div class="flex items-center gap-2">
+          <h1 class="font-headline text-headline-sm text-white">Kabir Mehta</h1>
+          <span class="text-xs font-label text-accent font-semibold">@kabir_rides</span>
+        </div>
+        <p class="text-xs font-body text-dark-on-surface-container mt-1">
+          Touring enthusiast • Ghat wanderer • Himalayan 450 rider • Mumbai Chapter Leader
+        </p>
+
+        <div class="flex items-center gap-4 text-xs font-body text-dark-on-surface-container mt-2">
+          <span class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-xs text-accent">location_on</span> Mumbai, India
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-xs text-emerald-400">calendar_month</span> Joined Aug 2025
+          </span>
+        </div>
+
+        <!-- Social Connections Counter -->
+        <div class="flex items-center gap-5 pt-3 mt-3 border-t border-border/60 text-xs">
+          <div>
+            <span class="font-stat font-bold text-white text-sm">342</span>
+            <span class="text-dark-on-surface-container font-label ml-1">Followers</span>
+          </div>
+          <div>
+            <span class="font-stat font-bold text-white text-sm">188</span>
+            <span class="text-dark-on-surface-container font-label ml-1">Following</span>
+          </div>
+          <div>
+            <span class="font-stat font-bold text-accent text-sm">3</span>
+            <span class="text-dark-on-surface-container font-label ml-1">Clubs</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Underline Tabs: OVERVIEW, RIDES, ACHIEVEMENTS -->
+    <div class="px-4 border-b border-border mt-3 flex items-center gap-6 overflow-x-auto no-scrollbar">
+      <button onclick="switchTab(&#39;achievements&#39;, this)" class="tab-btn pb-2.5 border-b-2 border-accent text-accent font-label text-xs font-semibold whitespace-nowrap">
+        Trophy Shelf &amp; Badges (12)
+      </button>
+      <button onclick="switchTab(&#39;rides&#39;, this)" class="tab-btn pb-2.5 border-b-2 border-transparent text-dark-on-surface-container hover:text-white font-label text-xs whitespace-nowrap">
+        Rides (58)
+      </button>
+      <button onclick="switchTab(&#39;garage&#39;, this)" class="tab-btn pb-2.5 border-b-2 border-transparent text-dark-on-surface-container hover:text-white font-label text-xs whitespace-nowrap">
+        Garage (2)
+      </button>
+    </div>
+
+    <!-- Tab Panels Container -->
+    <main class="flex-1 px-4 py-3 overflow-y-auto no-scrollbar">
+
+      <!-- Panel: Achievements (Highlighted Feature) -->
+      <div id="panel-achievements" class="space-y-4">
+        
+        <div class="flex items-center justify-between text-xs font-label text-dark-on-surface-container">
+          <span>INDIVIDUAL MILESTONES (10/14)</span>
+          <span class="text-accent font-stat">71% Completed</span>
+        </div>
+
+        <!-- Achievement Cards Grid -->
+        <div class="grid grid-cols-2 gap-2.5">
+          
+          <!-- Badge 1: 5000 KM -->
+          <a href="../motion-showcase/MotionShowcase.html" class="bg-dark-surface-container border border-amber-500/40 rounded-2xl p-3 flex flex-col justify-between relative group hover:border-amber-400 transition">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center mb-2">
+              <span class="material-symbols-outlined text-xl">military_tech</span>
+            </div>
+            <div>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-label font-bold bg-amber-500/20 text-amber-300">DISTANCE</span>
+              <h3 class="font-headline text-xs font-bold text-white mt-1">5,000 KM Milestone</h3>
+              <p class="text-[10px] font-body text-dark-on-surface-container mt-0.5">Unlocked Nov 10, 2026</p>
+            </div>
+          </a>
+
+          <!-- Badge 2: State Explorer -->
+          <a href="../motion-showcase/MotionShowcase.html" class="bg-dark-surface-container border border-emerald-500/40 rounded-2xl p-3 flex flex-col justify-between relative group hover:border-emerald-400 transition">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2">
+              <span class="material-symbols-outlined text-xl">map</span>
+            </div>
+            <div>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-label font-bold bg-emerald-500/20 text-emerald-300">EXPLORATION</span>
+              <h3 class="font-headline text-xs font-bold text-white mt-1">State Explorer</h3>
+              <p class="text-[10px] font-body text-dark-on-surface-container mt-0.5">5 Maharashtra Districts</p>
+            </div>
+          </a>
+
+          <!-- Badge 3: 50 Rides -->
+          <a href="../motion-showcase/MotionShowcase.html" class="bg-dark-surface-container border border-accent/40 rounded-2xl p-3 flex flex-col justify-between relative group hover:border-accent transition">
+            <div class="w-10 h-10 rounded-xl bg-accent/20 text-accent flex items-center justify-center mb-2">
+              <span class="material-symbols-outlined text-xl">two_wheeler</span>
+            </div>
+            <div>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-label font-bold bg-accent/20 text-orange-300">COUNT</span>
+              <h3 class="font-headline text-xs font-bold text-white mt-1">50 Rides Logged</h3>
+              <p class="text-[10px] font-body text-dark-on-surface-container mt-0.5">Unlocked Oct 18, 2026</p>
+            </div>
+          </a>
+
+          <!-- Badge 4: Club Member -->
+          <a href="../motion-showcase/MotionShowcase.html" class="bg-dark-surface-container border border-blue-500/40 rounded-2xl p-3 flex flex-col justify-between relative group hover:border-blue-400 transition">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center mb-2">
+              <span class="material-symbols-outlined text-xl">groups</span>
+            </div>
+            <div>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-label font-bold bg-blue-500/20 text-blue-300">COMMUNITY</span>
+              <h3 class="font-headline text-xs font-bold text-white mt-1">Club Contributor</h3>
+              <p class="text-[10px] font-body text-dark-on-surface-container mt-0.5">Joined 3 Riding Clubs</p>
+            </div>
+          </a>
+
+          <!-- Badge 5: Locked Example -->
+          <div class="bg-dark-surface-container/50 border border-border rounded-2xl p-3 flex flex-col justify-between opacity-60">
+            <div class="w-10 h-10 rounded-xl bg-zinc-800 text-zinc-500 flex items-center justify-center mb-2">
+              <span class="material-symbols-outlined text-xl">lock</span>
+            </div>
+            <div>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-label font-bold bg-zinc-800 text-zinc-400">LOCKED</span>
+              <h3 class="font-headline text-xs font-bold text-zinc-300 mt-1">10,000 KM Odyssey</h3>
+              <!-- Progress bar -->
+              <div class="w-full h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
+                <div class="w-[68%] h-full bg-accent rounded-full"></div>
+              </div>
+              <p class="text-[10px] font-stat text-dark-on-surface-container mt-1">6,842 / 10,000 KM</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Bottom Navigation Dock -->
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] h-16 bg-dark-surface-container-high/95 backdrop-blur-md border-t border-border z-40 px-3 flex items-center justify-between">
+      <a href="../home-dashboard/HomeDashboard.html" class="flex-1 flex flex-col items-center justify-center text-dark-on-surface-container py-1">
+        <span class="material-symbols-outlined text-xl">home</span>
+        <span class="font-label text-[10px] mt-0.5">Home</span>
+      </a>
+      <a href="../explore-hub/ExploreHub.html" class="flex-1 flex flex-col items-center justify-center text-dark-on-surface-container py-1">
+        <span class="material-symbols-outlined text-xl">explore</span>
+        <span class="font-label text-[10px] mt-0.5">Explore</span>
+      </a>
+      <div class="relative -top-5 flex-shrink-0 px-2">
+        <a href="../active-ride-tracking/ActiveRideTracking.html" class="w-14 h-14 rounded-full bg-accent text-white flex items-center justify-center shadow-xl border-4 border-dark-surface active:scale-90 transition">
+          <span class="material-symbols-outlined text-2xl font-bold">sports_motorsports</span>
+        </a>
+      </div>
+      <a href="../community-feed/CommunityFeed.html" class="flex-1 flex flex-col items-center justify-center text-dark-on-surface-container py-1">
+        <span class="material-symbols-outlined text-xl">groups</span>
+        <span class="font-label text-[10px] mt-0.5">Community</span>
+      </a>
+      <a href="../rider-profile/RiderProfile.html" class="flex-1 flex flex-col items-center justify-center text-accent py-1">
+        <span class="material-symbols-outlined text-xl">person</span>
+        <span class="font-label text-[10px] font-bold mt-0.5">Profile</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+    function switchTab(tabName, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('border-accent', 'text-accent');
+        b.classList.add('border-transparent', 'text-dark-on-surface-container');
+      });
+      btn.classList.remove('border-transparent', 'text-dark-on-surface-container');
+      btn.classList.add('border-accent', 'text-accent');
+    }
+  </script>
+
+
+</body></html>

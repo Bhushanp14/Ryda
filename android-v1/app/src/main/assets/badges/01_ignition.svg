@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+
+  <defs>
+    <!-- Gold-Orange Metallic Rim Gradient -->
+    <linearGradient id="rimGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="25%" stop-color="#FFB300"/>
+      <stop offset="55%" stop-color="#F57C00"/>
+      <stop offset="85%" stop-color="#E65100"/>
+      <stop offset="100%" stop-color="#FFB74D"/>
+    </linearGradient>
+    <linearGradient id="rimInner" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4A2500"/>
+      <stop offset="50%" stop-color="#FF9800"/>
+      <stop offset="100%" stop-color="#FFF3E0"/>
+    </linearGradient>
+    <linearGradient id="darkBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E2733"/>
+      <stop offset="50%" stop-color="#12171F"/>
+      <stop offset="100%" stop-color="#0B0E14"/>
+    </linearGradient>
+    <linearGradient id="skyBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5C8BB5"/>
+      <stop offset="60%" stop-color="#A5C4DF"/>
+      <stop offset="100%" stop-color="#DCE8F2"/>
+    </linearGradient>
+    <linearGradient id="sunsetSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8E24AA" stop-opacity="0.3"/>
+      <stop offset="20%" stop-color="#D84315"/>
+      <stop offset="65%" stop-color="#FB8C00"/>
+      <stop offset="100%" stop-color="#FFE082"/>
+    </linearGradient>
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="45%" stop-color="#CFD8DC"/>
+      <stop offset="80%" stop-color="#90A4AE"/>
+      <stop offset="100%" stop-color="#ECEFF1"/>
+    </linearGradient>
+    <linearGradient id="goldTrophy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF59D"/>
+      <stop offset="40%" stop-color="#FFD54F"/>
+      <stop offset="75%" stop-color="#FF8F00"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </linearGradient>
+    <linearGradient id="redHeart" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7043"/>
+      <stop offset="45%" stop-color="#E53935"/>
+      <stop offset="100%" stop-color="#8E0000"/>
+    </linearGradient>
+    <clipPath id="hexClip">
+      <polygon points="100,22 168,61 168,139 100,178 32,139 32,61"/>
+    </clipPath>
+    <filter id="dropShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.65"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#dropShadow)">
+    <!-- Outer Metallic Bevel -->
+    <polygon points="100,12 177,56 177,144 100,188 23,144 23,56" fill="url(#rimGold)"/>
+    <polygon points="100,17 172,59 172,141 100,183 28,141 28,59" fill="url(#rimInner)"/>
+    <!-- Inner Shield Background -->
+    <polygon points="100,22 168,61 168,139 100,178 32,139 32,61" fill="url(#darkBg)"/>
+    <!-- Clipped Artwork -->
+    <g clip-path="url(#hexClip)">
+
+      <g transform="translate(100,102)">
+        <!-- Helmet Shell -->
+        <path d="M-38,12 C-42,-22 -20,-42 8,-40 C30,-38 42,-20 42,2 L44,18 C44,24 38,28 28,28 L-18,28 C-30,28 -38,22 -38,12 Z" fill="url(#silverGrad)" stroke="#263238" stroke-width="2"/>
+        <!-- Racing Stripe -->
+        <path d="M-28,-22 C-12,-35 12,-34 28,-20 L24,-14 C10,-26 -10,-27 -24,-15 Z" fill="#FF8F00"/>
+        <!-- Visor -->
+        <path d="M-8,-14 L39,-12 C42,-4 41,6 37,12 L-4,8 C-10,5 -12,-6 -8,-14 Z" fill="#101820" stroke="#CFD8DC" stroke-width="1.5"/>
+        <path d="M-2,-10 L32,-9 L26,-3 L-4,-4 Z" fill="#4FC3F7" fill-opacity="0.35"/>
+        <!-- Chin Guard Accent -->
+        <path d="M6,12 L42,14 L38,24 L6,23 Z" fill="#F57C00"/>
+        <circle cx="-12" cy="2" r="4.5" fill="#90A4AE" stroke="#263238" stroke-width="1.5"/>
+      </g>
+
+    </g>
+    <!-- Inner Rim Highlight Stroke -->
+    <polygon points="100,22 168,61 168,139 100,178 32,139 32,61" fill="none" stroke="#FFD54F" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  </g>
+</svg>

@@ -1,0 +1,280 @@
+<!DOCTYPE html><html lang="en" class="dark"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RYDA — Ride History &amp; Analytics</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'accent': '#FF6B35',
+        'telemetry': '#00E5FF',
+        'success': '#10B981',
+        'warning': '#F59E0B',
+        'error': '#EF4444',
+        'border': '#30333A',
+        'subtle-border': '#252830',
+        'dark-surface': '#101114',
+        'dark-surface-elevated': '#0D0F12',
+        'dark-on-surface': '#F5F5F5',
+        'dark-surface-container': '#191B20',
+        'dark-on-surface-container': '#9A9DA5',
+        'dark-surface-container-high': '#22252B',
+        'dark-on-surface-container-high': '#F5F5F5',
+        'on-accent': '#101114',
+      },
+      borderRadius: {
+        'xs': '4px',
+        'sm': '6px',
+        'DEFAULT': '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        'pill': '9999px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-base': '16px',
+        'gutter-lg': '20px',
+        'gutter-xl': '24px',
+        'section': '32px',
+        'page-margin': '16px',
+        'dock-height': '64px',
+      },
+      fontFamily: {
+        'headline': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'body': ['"Instrument Sans"', 'sans-serif'],
+        'label': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'stat': ['"Source Code Pro"', 'monospace', 'sans-serif'],
+      },
+      fontSize: {
+        'xs': ['12px', { lineHeight: '16px' }],
+        'sm': ['14px', { lineHeight: '20px' }],
+        'base': ['16px', { lineHeight: '24px' }],
+        'lg': ['18px', { lineHeight: '26px' }],
+        'xl': ['20px', { lineHeight: '28px' }],
+        '2xl': ['24px', { lineHeight: '32px' }],
+        '3xl': ['30px', { lineHeight: '36px' }],
+        'display-lg': ['40px', { lineHeight: '48px', letterSpacing: '-0.5px', fontWeight: '800' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.3px', fontWeight: '800' }],
+        'headline-xl': ['36px', { lineHeight: '44px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'headline-xl-mobile': ['28px', { lineHeight: '34px', letterSpacing: '-0.25px', fontWeight: '700' }],
+        'headline-lg': ['28px', { lineHeight: '36px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-lg-mobile': ['24px', { lineHeight: '32px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-md': ['20px', { lineHeight: '28px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'headline-sm': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '600' }],
+        'body-lg': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.1px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.2px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.4px', fontWeight: '600' }],
+        'stat-metric': ['32px', { lineHeight: '36px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'stat-metric-mobile': ['28px', { lineHeight: '32px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'stat-unit': ['12px', { lineHeight: '16px', letterSpacing: '0.5px', fontWeight: '700' }],
+      },
+      transitionDuration: {
+        'tap-press': '120ms',
+        'control-expand': '200ms',
+        'sheet-slide': '300ms',
+        'badge-unlock': '600ms',
+      },
+      transitionTimingFunction: {
+        'tap-press': 'cubic-bezier(0.2, 0.8, 0.4, 1)',
+        'control-expand': 'cubic-bezier(0.0, 0.0, 0.2, 1)',
+        'sheet-slide': 'cubic-bezier(0.2, 0.9, 0.3, 1)',
+        'badge-unlock': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;family=Source+Code+Pro:wght@600;700;800&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-dark-surface text-dark-on-surface antialiased select-none font-body">
+
+  <div class="w-full max-w-[390px] mx-auto min-h-[884px] bg-dark-surface border-x border-border flex flex-col justify-between relative overflow-hidden pb-20" data-stitch-vh="min-h-[884px]===min-h-screen">
+
+    <!-- Top Header -->
+    <header class="sticky top-0 z-30 bg-dark-surface/95 backdrop-blur-sm border-b border-border px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="../home-dashboard/HomeDashboard.html" class="w-9 h-9 rounded-xl bg-dark-surface-container border border-border flex items-center justify-center text-white hover:text-accent active:scale-95 transition">
+          <span class="material-symbols-outlined text-lg">arrow_back</span>
+        </a>
+        <div>
+          <h1 class="font-headline text-headline-sm text-white">Ride History</h1>
+          <p class="text-[11px] font-body text-dark-on-surface-container">58 Recorded Rides • 6,842 KM Total</p>
+        </div>
+      </div>
+
+      <!-- Filter button -->
+      <button type="button" onclick="toggleFilterDrawer()" class="w-9 h-9 rounded-xl bg-dark-surface-container border border-border flex items-center justify-center text-dark-on-surface hover:text-accent active:scale-95 transition">
+        <span class="material-symbols-outlined text-lg">filter_list</span>
+      </button>
+    </header>
+
+    <!-- Filter Chips Horizontal Bar -->
+    <div class="px-4 py-2.5 bg-dark-surface-container/60 border-b border-border flex items-center gap-2 overflow-x-auto no-scrollbar">
+      <button class="px-3 py-1 rounded-full bg-accent text-white font-label text-xs font-semibold whitespace-nowrap shadow-sm">All (58)</button>
+      <button class="px-3 py-1 rounded-full bg-dark-surface-container-high border border-border text-dark-on-surface-container hover:text-white font-label text-xs whitespace-nowrap">This Month (6)</button>
+      <button class="px-3 py-1 rounded-full bg-dark-surface-container-high border border-border text-dark-on-surface-container hover:text-white font-label text-xs whitespace-nowrap">Himalayan 450 (46)</button>
+      <button class="px-3 py-1 rounded-full bg-dark-surface-container-high border border-border text-dark-on-surface-container hover:text-white font-label text-xs whitespace-nowrap">Yezdi (12)</button>
+    </div>
+
+    <!-- History List Scroll -->
+    <main class="flex-1 px-4 py-3 space-y-4 overflow-y-auto no-scrollbar">
+
+      <!-- Group: November 2026 -->
+      <div>
+        <div class="flex items-center justify-between text-xs font-label text-dark-on-surface-container mb-2">
+          <span>NOVEMBER 2026</span>
+          <span class="font-stat text-[11px]">4 Rides • 382.4 KM</span>
+        </div>
+
+        <div class="space-y-2.5">
+          <!-- Ride 1 -->
+          <a href="../completed-ride-summary/CompletedRideSummary.html" class="block bg-dark-surface-container border border-border hover:border-zinc-500 rounded-2xl p-3.5 transition active:scale-[0.99]">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <span class="text-[10px] font-label text-accent uppercase">Yesterday, 06:15 AM</span>
+                <h3 class="font-headline text-headline-sm text-white">Mumbai to Lonavala Ghat Run</h3>
+                <span class="text-xs text-dark-on-surface-container font-body">Royal Enfield Himalayan 450</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-label bg-emerald-500/20 text-emerald-400">Private</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 py-2 border-t border-border/60 text-xs">
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Distance</span>
+                <span class="font-stat font-bold text-white text-sm">88.4 KM</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Time</span>
+                <span class="font-stat font-bold text-white text-sm">01:42:15</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Avg Speed</span>
+                <span class="font-stat font-bold text-telemetry text-sm">51.9 KM/H</span>
+              </div>
+            </div>
+          </a>
+
+          <!-- Ride 2 -->
+          <a href="../completed-ride-summary/CompletedRideSummary.html" class="block bg-dark-surface-container border border-border hover:border-zinc-500 rounded-2xl p-3.5 transition active:scale-[0.99]">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <span class="text-[10px] font-label text-dark-on-surface-container uppercase">Nov 14, 05:45 AM</span>
+                <h3 class="font-headline text-headline-sm text-white">Nashik to Igatpuri Morning Mist</h3>
+                <span class="text-xs text-dark-on-surface-container font-body">Royal Enfield Himalayan 450</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-label bg-blue-500/20 text-blue-400">Published</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 py-2 border-t border-border/60 text-xs">
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Distance</span>
+                <span class="font-stat font-bold text-white text-sm">114.2 KM</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Time</span>
+                <span class="font-stat font-bold text-white text-sm">02:18:40</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Avg Speed</span>
+                <span class="font-stat font-bold text-telemetry text-sm">49.4 KM/H</span>
+              </div>
+            </div>
+          </a>
+
+          <!-- Ride 3 -->
+          <a href="../completed-ride-summary/CompletedRideSummary.html" class="block bg-dark-surface-container border border-border hover:border-zinc-500 rounded-2xl p-3.5 transition active:scale-[0.99]">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <span class="text-[10px] font-label text-dark-on-surface-container uppercase">Nov 08, 07:10 AM</span>
+                <h3 class="font-headline text-headline-sm text-white">Mumbai to Alibaug Coastal Loop</h3>
+                <span class="text-xs text-dark-on-surface-container font-body">Yezdi Roadster</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-label bg-emerald-500/20 text-emerald-400">Private</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 py-2 border-t border-border/60 text-xs">
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Distance</span>
+                <span class="font-stat font-bold text-white text-sm">96.8 KM</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Time</span>
+                <span class="font-stat font-bold text-white text-sm">02:05:12</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Avg Speed</span>
+                <span class="font-stat font-bold text-telemetry text-sm">46.3 KM/H</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Group: October 2026 -->
+      <div>
+        <div class="flex items-center justify-between text-xs font-label text-dark-on-surface-container mb-2">
+          <span>OCTOBER 2026</span>
+          <span class="font-stat text-[11px]">8 Rides • 892.0 KM</span>
+        </div>
+
+        <div class="space-y-2.5">
+          <a href="../completed-ride-summary/CompletedRideSummary.html" class="block bg-dark-surface-container border border-border hover:border-zinc-500 rounded-2xl p-3.5 transition active:scale-[0.99]">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <span class="text-[10px] font-label text-dark-on-surface-container uppercase">Oct 26, 05:00 AM</span>
+                <h3 class="font-headline text-headline-sm text-white">Pune to Mahabaleshwar Cloud Tour</h3>
+                <span class="text-xs text-dark-on-surface-container font-body">Royal Enfield Himalayan 450</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-label bg-blue-500/20 text-blue-400">Published</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 py-2 border-t border-border/60 text-xs">
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Distance</span>
+                <span class="font-stat font-bold text-white text-sm">122.0 KM</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Time</span>
+                <span class="font-stat font-bold text-white text-sm">02:40:00</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-dark-on-surface-container block">Avg Speed</span>
+                <span class="font-stat font-bold text-telemetry text-sm">45.7 KM/H</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script>
+    function toggleFilterDrawer() {
+      alert("Filter options: By Date Range, Motorcycle (Himalayan / Yezdi), or Min Distance.");
+    }
+  </script>
+
+
+</body></html>

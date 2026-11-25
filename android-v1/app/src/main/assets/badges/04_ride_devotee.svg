@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+
+  <defs>
+    <!-- Gold-Orange Metallic Rim Gradient -->
+    <linearGradient id="rimGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="25%" stop-color="#FFB300"/>
+      <stop offset="55%" stop-color="#F57C00"/>
+      <stop offset="85%" stop-color="#E65100"/>
+      <stop offset="100%" stop-color="#FFB74D"/>
+    </linearGradient>
+    <linearGradient id="rimInner" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4A2500"/>
+      <stop offset="50%" stop-color="#FF9800"/>
+      <stop offset="100%" stop-color="#FFF3E0"/>
+    </linearGradient>
+    <linearGradient id="darkBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E2733"/>
+      <stop offset="50%" stop-color="#12171F"/>
+      <stop offset="100%" stop-color="#0B0E14"/>
+    </linearGradient>
+    <linearGradient id="skyBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5C8BB5"/>
+      <stop offset="60%" stop-color="#A5C4DF"/>
+      <stop offset="100%" stop-color="#DCE8F2"/>
+    </linearGradient>
+    <linearGradient id="sunsetSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8E24AA" stop-opacity="0.3"/>
+      <stop offset="20%" stop-color="#D84315"/>
+      <stop offset="65%" stop-color="#FB8C00"/>
+      <stop offset="100%" stop-color="#FFE082"/>
+    </linearGradient>
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="45%" stop-color="#CFD8DC"/>
+      <stop offset="80%" stop-color="#90A4AE"/>
+      <stop offset="100%" stop-color="#ECEFF1"/>
+    </linearGradient>
+    <linearGradient id="goldTrophy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF59D"/>
+      <stop offset="40%" stop-color="#FFD54F"/>
+      <stop offset="75%" stop-color="#FF8F00"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </linearGradient>
+    <linearGradient id="redHeart" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7043"/>
+      <stop offset="45%" stop-color="#E53935"/>
+      <stop offset="100%" stop-color="#8E0000"/>
+    </linearGradient>
+    <clipPath id="hexClip">
+      <polygon points="100,22 168,61 168,139 100,178 32,139 32,61"/>
+    </clipPath>
+    <filter id="dropShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.65"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#dropShadow)">
+    <!-- Outer Metallic Bevel -->
+    <polygon points="100,12 177,56 177,144 100,188 23,144 23,56" fill="url(#rimGold)"/>
+    <polygon points="100,17 172,59 172,141 100,183 28,141 28,59" fill="url(#rimInner)"/>
+    <!-- Inner Shield Background -->
+    <polygon points="100,22 168,61 168,139 100,178 32,139 32,61" fill="url(#darkBg)"/>
+    <!-- Clipped Artwork -->
+    <g clip-path="url(#hexClip)">
+
+      <!-- Laurel Wreath -->
+      <g fill="url(#goldTrophy)" stroke="#5D2E00" stroke-width="0.8">
+        <!-- Left Branch -->
+        <path d="M92,148 C62,142 46,116 50,82" fill="none" stroke="#FFA000" stroke-width="2.5"/>
+        <ellipse cx="50" cy="84" rx="4" ry="9" transform="rotate(-25 50 84)"/>
+        <ellipse cx="48" cy="98" rx="4.5" ry="10" transform="rotate(-40 48 98)"/>
+        <ellipse cx="52" cy="113" rx="4.5" ry="10" transform="rotate(-55 52 113)"/>
+        <ellipse cx="60" cy="127" rx="4.5" ry="10" transform="rotate(-70 60 127)"/>
+        <ellipse cx="73" cy="138" rx="4.5" ry="9" transform="rotate(-82 73 138)"/>
+        <!-- Right Branch -->
+        <path d="M108,148 C138,142 154,116 150,82" fill="none" stroke="#FFA000" stroke-width="2.5"/>
+        <ellipse cx="150" cy="84" rx="4" ry="9" transform="rotate(25 150 84)"/>
+        <ellipse cx="152" cy="98" rx="4.5" ry="10" transform="rotate(40 152 98)"/>
+        <ellipse cx="148" cy="113" rx="4.5" ry="10" transform="rotate(55 148 113)"/>
+        <ellipse cx="140" cy="127" rx="4.5" ry="10" transform="rotate(70 140 127)"/>
+        <ellipse cx="127" cy="138" rx="4.5" ry="9" transform="rotate(82 127 138)"/>
+      </g>
+      <!-- Trophy Cup -->
+      <g transform="translate(100,100)">
+        <!-- Handles -->
+        <path d="M-22,-26 C-38,-26 -38,-2 -20,2" fill="none" stroke="url(#goldTrophy)" stroke-width="4.5"/>
+        <path d="M22,-26 C38,-26 38,-2 20,2" fill="none" stroke="url(#goldTrophy)" stroke-width="4.5"/>
+        <!-- Cup Bowl -->
+        <path d="M-24,-32 L24,-32 L18,2 C15,14 6,18 0,18 C-6,18 -15,14 -18,2 Z" fill="url(#goldTrophy)" stroke="#6D3800" stroke-width="1.2"/>
+        <!-- Stem & Base -->
+        <rect x="-4" y="17" width="8" height="16" fill="url(#goldTrophy)"/>
+        <path d="M-16,33 L16,33 L20,42 L-20,42 Z" fill="url(#goldTrophy)" stroke="#6D3800" stroke-width="1.2"/>
+        <rect x="-22" y="42" width="44" height="6" rx="2" fill="#E65100"/>
+      </g>
+
+    </g>
+    <!-- Inner Rim Highlight Stroke -->
+    <polygon points="100,22 168,61 168,139 100,178 32,139 32,61" fill="none" stroke="#FFD54F" stroke-width="1.5" stroke-opacity="0.6"/>
+
+  </g>
+</svg>

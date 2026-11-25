@@ -1,0 +1,498 @@
+<!DOCTYPE html><html lang="en" class="dark"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RYDA — Home Dashboard</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'accent': '#FF6B35',
+        'telemetry': '#00E5FF',
+        'success': '#10B981',
+        'warning': '#F59E0B',
+        'error': '#EF4444',
+        'border': '#30333A',
+        'subtle-border': '#252830',
+        'dark-surface': '#101114',
+        'dark-surface-elevated': '#0D0F12',
+        'dark-on-surface': '#F5F5F5',
+        'dark-surface-container': '#191B20',
+        'dark-on-surface-container': '#9A9DA5',
+        'dark-surface-container-high': '#22252B',
+        'dark-on-surface-container-high': '#F5F5F5',
+        'on-accent': '#101114',
+      },
+      borderRadius: {
+        'xs': '4px',
+        'sm': '6px',
+        'DEFAULT': '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        'pill': '9999px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-base': '16px',
+        'gutter-lg': '20px',
+        'gutter-xl': '24px',
+        'section': '32px',
+        'page-margin': '16px',
+        'dock-height': '64px',
+      },
+      fontFamily: {
+        'headline': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'body': ['"Instrument Sans"', 'sans-serif'],
+        'label': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'stat': ['"Source Code Pro"', 'monospace', 'sans-serif'],
+      },
+      fontSize: {
+        'xs': ['12px', { lineHeight: '16px' }],
+        'sm': ['14px', { lineHeight: '20px' }],
+        'base': ['16px', { lineHeight: '24px' }],
+        'lg': ['18px', { lineHeight: '26px' }],
+        'xl': ['20px', { lineHeight: '28px' }],
+        '2xl': ['24px', { lineHeight: '32px' }],
+        '3xl': ['30px', { lineHeight: '36px' }],
+        'display-lg': ['40px', { lineHeight: '48px', letterSpacing: '-0.5px', fontWeight: '800' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.3px', fontWeight: '800' }],
+        'headline-xl': ['36px', { lineHeight: '44px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'headline-xl-mobile': ['28px', { lineHeight: '34px', letterSpacing: '-0.25px', fontWeight: '700' }],
+        'headline-lg': ['28px', { lineHeight: '36px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-lg-mobile': ['24px', { lineHeight: '32px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-md': ['20px', { lineHeight: '28px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'headline-sm': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '600' }],
+        'body-lg': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.1px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.2px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.4px', fontWeight: '600' }],
+        'stat-metric': ['32px', { lineHeight: '36px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'stat-metric-mobile': ['28px', { lineHeight: '32px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'stat-unit': ['12px', { lineHeight: '16px', letterSpacing: '0.5px', fontWeight: '700' }],
+      },
+      transitionDuration: {
+        'tap-press': '120ms',
+        'control-expand': '200ms',
+        'sheet-slide': '300ms',
+        'badge-unlock': '600ms',
+      },
+      transitionTimingFunction: {
+        'tap-press': 'cubic-bezier(0.2, 0.8, 0.4, 1)',
+        'control-expand': 'cubic-bezier(0.0, 0.0, 0.2, 1)',
+        'sheet-slide': 'cubic-bezier(0.2, 0.9, 0.3, 1)',
+        'badge-unlock': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;family=Source+Code+Pro:wght@600;700&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes pulse-subtle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.85; transform: scale(1.02); } }
+    .animate-beacon { animation: pulse-subtle 3s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-dark-surface text-dark-on-surface antialiased select-none font-body">
+
+  <!-- Mobile Viewport Shell (Android 390px) -->
+  <div class="w-full max-w-[390px] mx-auto min-h-[884px] bg-dark-surface border-x border-border flex flex-col justify-between relative overflow-hidden pb-24" data-stitch-vh="min-h-[884px]===min-h-screen">
+
+    <!-- Top Android Status & Brand Header -->
+    <header class="sticky top-0 z-30 bg-dark-surface/95 backdrop-blur-sm border-b border-border/70 px-4 pt-3 pb-3">
+      <div class="flex items-center justify-between mb-3 text-xs text-dark-on-surface-container font-stat">
+        <span>09:41</span>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] px-1 rounded bg-zinc-800 text-telemetry font-bold">5G</span>
+          <span class="material-symbols-outlined text-sm">wifi</span>
+          <span class="material-symbols-outlined text-sm">battery_full</span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <!-- Logo & Greeting -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-orange-950/40 text-white font-headline font-extrabold text-lg tracking-wider">
+            R
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-headline text-headline-sm text-dark-on-surface tracking-tight">RYDA</span>
+              <span class="px-1.5 py-0.2 rounded text-[10px] font-label font-bold bg-zinc-800 text-accent uppercase tracking-widest">PRO</span>
+            </div>
+            <p class="font-body text-[11px] text-dark-on-surface-container">Namaste, Kabir • Clear 24°C</p>
+          </div>
+        </div>
+
+        <!-- Global Header Actions -->
+        <div class="flex items-center gap-2">
+          <!-- Notification Icon with Unread Badge -->
+          <button type="button" id="btn-notif" onclick="toggleNotificationSheet()" class="relative w-9 h-9 rounded-xl bg-dark-surface-container border border-border flex items-center justify-center text-dark-on-surface hover:text-accent hover:border-zinc-600 transition active:scale-95" aria-label="View notifications">
+            <span class="material-symbols-outlined text-lg">notifications</span>
+            <span id="unread-dot" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-accent ring-2 ring-dark-surface"></span>
+          </button>
+
+          <!-- Rider Profile Avatar -->
+          <a href="../rider-profile/RiderProfile.html" class="relative block w-9 h-9 rounded-xl overflow-hidden border border-border hover:border-accent transition active:scale-95">
+            <img src="https://lh3.googleusercontent.com/aida/ALJJyrC6z6YK4wzVNPTYUXvdYHd0xUxl3HOUqn3XIP1jNgV4g5XH8B2bAYCGK8fYiCEEgJYx191NGhpoiqYaLB2OdwlxR1TOps8XojzyG8H6tiiI6fibucUy-zfYDNk8GdKUnD590ovlyxeYrKqSw9A_k6a9cvi0W2PyKLFpGv_5K4P79aiUb7oIhF88OeQb54mYgKc66iEQyHvOZaODBUYW6x7b-UvOzbrTg-ZYFILfUGbctafB2Yw" alt="Kabir Mehta Profile" class="w-full h-full object-cover">
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Scrollable Dashboard Content -->
+    <main class="flex-1 px-4 py-4 space-y-5 overflow-y-auto no-scrollbar">
+
+      <!-- Prominent Primary Call-to-Action: START RIDE HERO -->
+      <section class="relative rounded-2xl p-4 bg-gradient-to-b from-dark-surface-container-high to-dark-surface-container border border-accent/30 shadow-xl overflow-hidden group">
+        <!-- Glow highlight effect -->
+        <div class="absolute -right-12 -top-12 w-36 h-36 rounded-full bg-accent/15 blur-2xl pointer-events-none"></div>
+
+        <div class="flex items-start justify-between mb-3 relative z-10">
+          <div>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-label text-[11px]">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              GPS 3D Fix Acquired (9 Sats)
+            </span>
+            <h2 class="font-headline text-headline-md text-white mt-1.5">Ready for the road?</h2>
+            <p class="font-body text-body-sm text-dark-on-surface-container">Default: Himalayan 450 • MH-02-EE-4509</p>
+          </div>
+          <span class="material-symbols-outlined text-2xl text-accent">two_wheeler</span>
+        </div>
+
+        <!-- Quick Motorcycle Selector Pill -->
+        <div class="flex items-center justify-between p-2 rounded-xl bg-dark-surface/90 border border-subtle-border mb-3.5 relative z-10 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm text-accent">tune</span>
+            <span class="text-dark-on-surface font-label">Royal Enfield Himalayan 450</span>
+          </div>
+          <a href="../motorcycle-garage/MotorcycleGarage.html" class="text-accent font-label hover:underline text-[11px] flex items-center">
+            Switch
+            <span class="material-symbols-outlined text-xs">chevron_right</span>
+          </a>
+        </div>
+
+        <!-- START RIDE HERO BUTTON -->
+        <a href="../active-ride-tracking/ActiveRideTracking.html" class="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl bg-accent hover:bg-orange-500 active:scale-[0.98] text-white font-headline font-bold text-base shadow-lg shadow-orange-950/60 transition duration-tap-press tracking-wide relative z-10">
+          <span class="material-symbols-outlined text-xl">play_circle</span>
+          <span>START RECORDING RIDE</span>
+        </a>
+      </section>
+
+      <!-- Expressive Telemetry Snapshot (Season / Lifetime Metrics) -->
+      <section>
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 class="font-headline text-headline-sm text-dark-on-surface flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-base text-accent">speed</span>
+            Telemetry Odometer
+          </h2>
+          <span class="font-label text-xs text-dark-on-surface-container bg-dark-surface-container px-2 py-0.5 rounded-md border border-border">Season 2026</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <!-- Total Distance Metric -->
+          <div class="bg-dark-surface-container border border-border rounded-xl p-3 flex flex-col justify-between">
+            <span class="font-body text-body-sm text-dark-on-surface-container flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm text-accent">distance</span>
+              Total Distance
+            </span>
+            <div class="mt-2">
+              <span id="stat-dist" class="font-stat text-2xl font-bold text-dark-on-surface">6,842</span>
+              <span class="font-label text-xs text-dark-on-surface-container ml-0.5">KM</span>
+            </div>
+            <span class="text-[11px] text-emerald-400 font-label mt-1 flex items-center">
+              <span class="material-symbols-outlined text-xs">trending_up</span> +340 KM this month
+            </span>
+          </div>
+
+          <!-- Total Rides Count -->
+          <div class="bg-dark-surface-container border border-border rounded-xl p-3 flex flex-col justify-between">
+            <span class="font-body text-body-sm text-dark-on-surface-container flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm text-telemetry">sports_motorsports</span>
+              Rides Logged
+            </span>
+            <div class="mt-2">
+              <span id="stat-rides" class="font-stat text-2xl font-bold text-dark-on-surface">58</span>
+              <span class="font-label text-xs text-dark-on-surface-container ml-0.5">Sessions</span>
+            </div>
+            <span class="text-[11px] text-dark-on-surface-container font-label mt-1">100% incident-free</span>
+          </div>
+
+          <!-- Total Saddle Time -->
+          <div class="bg-dark-surface-container border border-border rounded-xl p-3 flex flex-col justify-between">
+            <span class="font-body text-body-sm text-dark-on-surface-container flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm text-amber-400">schedule</span>
+              Saddle Time
+            </span>
+            <div class="mt-2">
+              <span class="font-stat text-2xl font-bold text-dark-on-surface">148.5</span>
+              <span class="font-label text-xs text-dark-on-surface-container ml-0.5">HRS</span>
+            </div>
+            <span class="text-[11px] text-dark-on-surface-container font-label mt-1">Moving ratio 88%</span>
+          </div>
+
+          <!-- Average Cruising Speed -->
+          <div class="bg-dark-surface-container border border-border rounded-xl p-3 flex flex-col justify-between">
+            <span class="font-body text-body-sm text-dark-on-surface-container flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm text-accent">av_timer</span>
+              Avg Pace
+            </span>
+            <div class="mt-2">
+              <span class="font-stat text-2xl font-bold text-telemetry">54.2</span>
+              <span class="font-label text-xs text-dark-on-surface-container ml-0.5">KM/H</span>
+            </div>
+            <span class="text-[11px] text-dark-on-surface-container font-label mt-1">Touring pace</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recent Recorded Ride -->
+      <section>
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 class="font-headline text-headline-sm text-dark-on-surface">Recent Ride</h2>
+          <a href="../ride-history/RideHistory.html" class="text-xs font-label text-accent hover:underline flex items-center">
+            All Rides (58)
+            <span class="material-symbols-outlined text-xs">arrow_forward</span>
+          </a>
+        </div>
+
+        <a href="../completed-ride-summary/CompletedRideSummary.html" class="block bg-dark-surface-container border border-border hover:border-zinc-500 rounded-2xl p-3.5 transition duration-tap-press active:scale-[0.99]">
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2 py-0.5 rounded bg-zinc-800 border border-subtle-border text-[11px] font-label text-accent">Himalayan 450</span>
+                <span class="text-[11px] font-body text-dark-on-surface-container">Yesterday, 06:15 AM</span>
+              </div>
+              <h3 class="font-headline text-headline-sm text-white">Mumbai to Lonavala Ghat Run</h3>
+              <p class="text-xs font-body text-dark-on-surface-container">Via Old NH48 &amp; Tiger Point loop</p>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-zinc-800 text-[10px] font-label text-emerald-400 border border-emerald-500/20">Private</span>
+          </div>
+
+          <!-- Scenic thumbnail with route line overlay mockup -->
+          <div class="w-full h-24 rounded-xl overflow-hidden relative mb-3 border border-border/80">
+            <img src="https://lh3.googleusercontent.com/aida/ALJJyrBm9yy_hjMJIXsP-3RVcvJTM1yhp-Q_wb0Q1tTiZ1uBsOYCsdm9sTtV-YrdSpYmCoCx1YoNPEiEm_kW89ENbpNT0oW6-Grjk_mHxr_vQ4N0qGLxcmABF414KjiOQi0VCXGI19QfXoVpQNB-w9dIZMlHUJa5JiWHNiy48lxXHvEr2yhcDAtLZEtzwWKM9MqZwaOUWVAOaTFs4nZxp1Ll8vtaccngMD5CtXH27pkmGbSlRZMvTZsj7hhSlxFb2Tlh" alt="Lonavala Ghat View" class="w-full h-full object-cover brightness-75">
+            <div class="absolute inset-0 bg-gradient-to-t from-dark-surface/90 via-transparent to-transparent"></div>
+            <!-- Telemetry overlay pills -->
+            <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between text-xs font-stat text-white">
+              <span class="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded border border-white/10 font-bold">88.4 KM</span>
+              <span class="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded border border-white/10">01:42:10 HR</span>
+              <span class="bg-black/60 backdrop-blur-md px-2 py-0.5 rounded border border-white/10 text-telemetry">52 KM/H AVG</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1 text-xs">
+            <span class="text-dark-on-surface-container font-body flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm text-emerald-400">lock</span> Not published to community
+            </span>
+            <span class="text-accent font-label hover:underline">Publish Now →</span>
+          </div>
+        </a>
+      </section>
+
+      <!-- Upcoming Club Event Preview -->
+      <section>
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 class="font-headline text-headline-sm text-dark-on-surface">Club Rally</h2>
+          <a href="../club-detail/ClubDetail.html" class="text-xs font-label text-accent hover:underline">Club Hub</a>
+        </div>
+
+        <div class="bg-dark-surface-container border border-border rounded-2xl p-3.5 relative overflow-hidden">
+          <div class="flex items-center gap-3 mb-2.5">
+            <div class="w-10 h-10 rounded-xl overflow-hidden border border-border flex-shrink-0">
+              <img src="https://lh3.googleusercontent.com/aida/ALJJyrB1i-F8wH1UcvqrUSQ113KSeDG8DXwL8gbepJSUuvpA4nwB9P4CMvtATq1a0QIIgVCq7oKJ4fbc1cM4dv5vqNISyqeBIPcP1ONW_WDhv8Vc48C86w7ps_89ZaPXJltZjAnshWlOduPaMeX7V4ax9YeTq_NAojKfo_DGowAsdItAKwdJsABE4xMtA6RyII4Sx4przk4HhGOcO9vusIWgrFR3fICoqozahanL8xj4AQ5jBkUKb51h37IGLtgOpw" alt="Mumbai Weekend Riders" class="w-full h-full object-cover">
+            </div>
+            <div>
+              <span class="text-[10px] font-label text-accent uppercase tracking-wider">Mumbai Weekend Riders</span>
+              <h3 class="font-headline text-headline-sm text-white">Dawn Patrol to Igatpuri Fog Valley</h3>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs font-body text-dark-on-surface-container py-2 border-y border-border/60 mb-3">
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm text-accent">event</span>
+              <span>Saturday, 05:30 AM</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm text-telemetry">group</span>
+              <span>24 Riders Confirmed</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] text-dark-on-surface-container">Start: Fountain Hotel, Thane</span>
+            <button type="button" id="btn-rsvp-home" onclick="handleRsvpClick(this)" class="px-3 py-1.5 rounded-lg bg-dark-surface-container-high hover:bg-zinc-800 border border-border text-xs font-label text-white flex items-center gap-1 transition active:scale-95">
+              <span class="material-symbols-outlined text-sm text-accent">check_circle</span>
+              <span id="rsvp-status-text">RSVP Going</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Latest Achievement Badge Card -->
+      <section>
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 class="font-headline text-headline-sm text-dark-on-surface">Latest Milestone</h2>
+          <a href="../rider-profile/RiderProfile.html" class="text-xs font-label text-accent hover:underline">Trophy Shelf</a>
+        </div>
+
+        <div class="bg-dark-surface-container border border-amber-500/30 rounded-2xl p-3.5 flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400 flex-shrink-0">
+            <span class="material-symbols-outlined text-2xl">military_tech</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <h3 class="font-headline text-headline-sm text-white truncate">5,000 KM Milestone</h3>
+              <span class="px-1.5 py-0.2 rounded text-[10px] font-label font-bold bg-amber-500/20 text-amber-300">UNLOCKED</span>
+            </div>
+            <p class="text-xs font-body text-dark-on-surface-container">Logged over 5,000 recorded kilometers across Maharashtra</p>
+          </div>
+          <a href="../motion-showcase/MotionShowcase.html" class="text-accent hover:text-white" aria-label="View unlock animation">
+            <span class="material-symbols-outlined text-lg">auto_awesome</span>
+          </a>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Contextual Notification Drawer / Sheet Overlay (Triggered by bell) -->
+    <div id="notif-sheet" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex flex-col justify-end">
+      <div class="w-full max-w-[390px] mx-auto bg-dark-surface-container border-t border-border rounded-t-3xl p-5 shadow-2xl space-y-4 max-h-[707px] overflow-y-auto no-scrollbar" data-stitch-vh="max-h-[707px]===max-h-[80vh]">
+        <div class="w-12 h-1 rounded-full bg-zinc-700 mx-auto"></div>
+        <div class="flex items-center justify-between pb-2 border-b border-border">
+          <h3 class="font-headline text-headline-sm text-white">Notifications</h3>
+          <div class="flex items-center gap-2">
+            <button onclick="markAllNotificationsRead()" class="text-xs font-label text-accent hover:underline">Mark all read</button>
+            <button onclick="toggleNotificationSheet()" class="text-dark-on-surface-container hover:text-white">
+              <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2.5">
+          <!-- Item 1 -->
+          <div class="p-3 rounded-xl bg-dark-surface border border-subtle-border flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-accent/20 text-accent flex items-center justify-center flex-shrink-0">
+              <span class="material-symbols-outlined text-base">military_tech</span>
+            </div>
+            <div class="flex-1">
+              <p class="text-xs font-headline text-white font-semibold">New Achievement Unlocked!</p>
+              <p class="text-[11px] font-body text-dark-on-surface-container">You earned &#39;State Explorer&#39; for riding across 4 Maharashtra districts.</p>
+              <span class="text-[10px] text-zinc-500 font-stat">12m ago</span>
+            </div>
+          </div>
+          <!-- Item 2 -->
+          <div class="p-3 rounded-xl bg-dark-surface border border-subtle-border flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-telemetry/20 text-telemetry flex items-center justify-center flex-shrink-0">
+              <span class="material-symbols-outlined text-base">group_add</span>
+            </div>
+            <div class="flex-1">
+              <p class="text-xs font-headline text-white font-semibold">Club Invite: Yezdi Riders Club</p>
+              <p class="text-[11px] font-body text-dark-on-surface-container">Aarav Sen invited you to join the Western Chapter.</p>
+              <div class="flex gap-2 mt-2">
+                <button onclick="acceptClubInvite(this)" class="px-2.5 py-1 rounded bg-accent text-white font-label text-[10px]">Accept</button>
+                <button onclick="this.parentElement.parentElement.parentElement.remove()" class="px-2.5 py-1 rounded bg-zinc-800 text-dark-on-surface-container font-label text-[10px]">Decline</button>
+              </div>
+            </div>
+          </div>
+          <!-- Item 3 -->
+          <div class="p-3 rounded-xl bg-dark-surface border border-subtle-border flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center flex-shrink-0">
+              <span class="material-symbols-outlined text-base">favorite</span>
+            </div>
+            <div class="flex-1">
+              <p class="text-xs font-headline text-white font-semibold">Priya Sharma liked your ride</p>
+              <p class="text-[11px] font-body text-dark-on-surface-container">&#34;Nashik to Igatpuri Morning Mist Run&#34;</p>
+              <span class="text-[10px] text-zinc-500 font-stat">1h ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permanent Android Bottom Navigation Dock (Ergonomic 64px Dock with Raised Record Ride Trigger) -->
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] h-16 bg-dark-surface-container-high/95 backdrop-blur-md border-t border-border z-40 px-3 flex items-center justify-between">
+      
+      <!-- Home (Active) -->
+      <a href="../home-dashboard/HomeDashboard.html" class="flex-1 flex flex-col items-center justify-center text-accent py-1 group">
+        <span class="material-symbols-outlined text-xl transition group-active:scale-90">home</span>
+        <span class="font-label text-[10px] font-bold mt-0.5">Home</span>
+      </a>
+
+      <!-- Explore -->
+      <a href="../explore-hub/ExploreHub.html" class="flex-1 flex flex-col items-center justify-center text-dark-on-surface-container hover:text-white py-1 group">
+        <span class="material-symbols-outlined text-xl transition group-active:scale-90">explore</span>
+        <span class="font-label text-[10px] mt-0.5">Explore</span>
+      </a>
+
+      <!-- Center Raised "Record Ride" Action Button -->
+      <div class="relative -top-5 flex-shrink-0 px-2">
+        <a href="../active-ride-tracking/ActiveRideTracking.html" aria-label="Start recording ride" class="w-14 h-14 rounded-full bg-accent hover:bg-orange-500 text-white flex items-center justify-center shadow-xl shadow-orange-950/80 border-4 border-dark-surface active:scale-90 transition duration-tap-press animate-beacon">
+          <span class="material-symbols-outlined text-2xl font-bold">sports_motorsports</span>
+        </a>
+      </div>
+
+      <!-- Community -->
+      <a href="../community-feed/CommunityFeed.html" class="flex-1 flex flex-col items-center justify-center text-dark-on-surface-container hover:text-white py-1 group">
+        <span class="material-symbols-outlined text-xl transition group-active:scale-90">groups</span>
+        <span class="font-label text-[10px] mt-0.5">Community</span>
+      </a>
+
+      <!-- Profile -->
+      <a href="../rider-profile/RiderProfile.html" class="flex-1 flex flex-col items-center justify-center text-dark-on-surface-container hover:text-white py-1 group">
+        <span class="material-symbols-outlined text-xl transition group-active:scale-90">person</span>
+        <span class="font-label text-[10px] mt-0.5">Profile</span>
+      </a>
+
+    </nav>
+
+  </div>
+
+  <script>
+    function toggleNotificationSheet() {
+      const sheet = document.getElementById('notif-sheet');
+      sheet.classList.toggle('hidden');
+    }
+
+    function markAllNotificationsRead() {
+      const dot = document.getElementById('unread-dot');
+      if (dot) dot.style.display = 'none';
+      alert('All notifications marked as read.');
+      toggleNotificationSheet();
+    }
+
+    function acceptClubInvite(btn) {
+      btn.textContent = 'Joined!';
+      btn.classList.remove('bg-accent');
+      btn.classList.add('bg-emerald-600');
+    }
+
+    function handleRsvpClick(btn) {
+      const statusText = document.getElementById('rsvp-status-text');
+      if (statusText.textContent === 'RSVP Going') {
+        statusText.textContent = 'You are Attending!';
+        btn.classList.add('bg-emerald-600/40', 'border-emerald-500');
+      } else {
+        statusText.textContent = 'RSVP Going';
+        btn.classList.remove('bg-emerald-600/40', 'border-emerald-500');
+      }
+    }
+  </script>
+
+
+</body></html>

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+
+  <defs>
+    <!-- Gold-Orange Metallic Rim Gradient -->
+    <linearGradient id="rimGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="25%" stop-color="#FFB300"/>
+      <stop offset="55%" stop-color="#F57C00"/>
+      <stop offset="85%" stop-color="#E65100"/>
+      <stop offset="100%" stop-color="#FFB74D"/>
+    </linearGradient>
+    <linearGradient id="rimInner" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4A2500"/>
+      <stop offset="50%" stop-color="#FF9800"/>
+      <stop offset="100%" stop-color="#FFF3E0"/>
+    </linearGradient>
+    <linearGradient id="darkBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E2733"/>
+      <stop offset="50%" stop-color="#12171F"/>
+      <stop offset="100%" stop-color="#0B0E14"/>
+    </linearGradient>
+    <linearGradient id="skyBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5C8BB5"/>
+      <stop offset="60%" stop-color="#A5C4DF"/>
+      <stop offset="100%" stop-color="#DCE8F2"/>
+    </linearGradient>
+    <linearGradient id="sunsetSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8E24AA" stop-opacity="0.3"/>
+      <stop offset="20%" stop-color="#D84315"/>
+      <stop offset="65%" stop-color="#FB8C00"/>
+      <stop offset="100%" stop-color="#FFE082"/>
+    </linearGradient>
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="45%" stop-color="#CFD8DC"/>
+      <stop offset="80%" stop-color="#90A4AE"/>
+      <stop offset="100%" stop-color="#ECEFF1"/>
+    </linearGradient>
+    <linearGradient id="goldTrophy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF59D"/>
+      <stop offset="40%" stop-color="#FFD54F"/>
+      <stop offset="75%" stop-color="#FF8F00"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </linearGradient>
+    <linearGradient id="redHeart" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7043"/>
+      <stop offset="45%" stop-color="#E53935"/>
+      <stop offset="100%" stop-color="#8E0000"/>
+    </linearGradient>
+    <clipPath id="hexClip">
+      <polygon points="100,22 168,61 168,139 100,178 32,139 32,61"/>
+    </clipPath>
+    <filter id="dropShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.65"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#dropShadow)">
+    <circle cx="100" cy="100" r="84" fill="url(#rimGold)"/>
+    <circle cx="100" cy="100" r="78" fill="#11161E"/>
+    <circle cx="100" cy="100" r="73" fill="none" stroke="#FF9800" stroke-width="1.5"/>
+    <!-- Gauge Arc -->
+    <path d="M46,125 A60,60 0 1,1 154,125" fill="none" stroke="#CFD8DC" stroke-width="5" stroke-linecap="round"/>
+    <path d="M132,49 A60,60 0 0,1 154,125" fill="none" stroke="#E53935" stroke-width="6" stroke-linecap="round"/>
+    <!-- Ticks -->
+    <g stroke="#ECEFF1" stroke-width="2.5">
+      <line x1="52" y1="120" x2="60" y2="115"/>
+      <line x1="45" y1="95" x2="54" y2="96"/>
+      <line x1="55" y1="68" x2="63" y2="73"/>
+      <line x1="77" y1="49" x2="81" y2="57"/>
+      <line x1="100" y1="43" x2="100" y2="52"/>
+      <line x1="123" y1="49" x2="119" y2="57"/>
+      <line x1="145" y1="68" x2="137" y2="73"/>
+      <line x1="155" y1="95" x2="146" y2="96"/>
+    </g>
+    <!-- Needle -->
+    <polygon points="100,104 95,98 134,62 103,103" fill="#FF7043"/>
+    <circle cx="100" cy="100" r="9" fill="url(#rimGold)" stroke="#263238" stroke-width="2"/>
+  </g>
+</svg>

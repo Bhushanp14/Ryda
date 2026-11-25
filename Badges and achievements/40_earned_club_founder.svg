@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+
+  <defs>
+    <!-- Gold-Orange Metallic Rim Gradient -->
+    <linearGradient id="rimGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="25%" stop-color="#FFB300"/>
+      <stop offset="55%" stop-color="#F57C00"/>
+      <stop offset="85%" stop-color="#E65100"/>
+      <stop offset="100%" stop-color="#FFB74D"/>
+    </linearGradient>
+    <linearGradient id="rimInner" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4A2500"/>
+      <stop offset="50%" stop-color="#FF9800"/>
+      <stop offset="100%" stop-color="#FFF3E0"/>
+    </linearGradient>
+    <linearGradient id="darkBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E2733"/>
+      <stop offset="50%" stop-color="#12171F"/>
+      <stop offset="100%" stop-color="#0B0E14"/>
+    </linearGradient>
+    <linearGradient id="skyBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5C8BB5"/>
+      <stop offset="60%" stop-color="#A5C4DF"/>
+      <stop offset="100%" stop-color="#DCE8F2"/>
+    </linearGradient>
+    <linearGradient id="sunsetSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8E24AA" stop-opacity="0.3"/>
+      <stop offset="20%" stop-color="#D84315"/>
+      <stop offset="65%" stop-color="#FB8C00"/>
+      <stop offset="100%" stop-color="#FFE082"/>
+    </linearGradient>
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="45%" stop-color="#CFD8DC"/>
+      <stop offset="80%" stop-color="#90A4AE"/>
+      <stop offset="100%" stop-color="#ECEFF1"/>
+    </linearGradient>
+    <linearGradient id="goldTrophy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF59D"/>
+      <stop offset="40%" stop-color="#FFD54F"/>
+      <stop offset="75%" stop-color="#FF8F00"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </linearGradient>
+    <linearGradient id="redHeart" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7043"/>
+      <stop offset="45%" stop-color="#E53935"/>
+      <stop offset="100%" stop-color="#8E0000"/>
+    </linearGradient>
+    <clipPath id="hexClip">
+      <polygon points="100,22 168,61 168,139 100,178 32,139 32,61"/>
+    </clipPath>
+    <filter id="dropShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.65"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#dropShadow)">
+    <!-- Crest Shield Shape -->
+    <path d="M100,14 L174,46 L166,130 C162,158 130,176 100,188 C70,176 38,158 34,130 L26,46 Z" fill="url(#rimGold)"/>
+    <path d="M100,22 L166,51 L159,127 C155,152 126,168 100,179 C74,168 45,152 41,127 L34,51 Z" fill="url(#darkBg)"/>
+    <!-- Inner V Chevron -->
+    <polyline points="42,112 100,148 158,112" fill="none" stroke="url(#rimGold)" stroke-width="5"/>
+    <!-- Eagle / Emblem at bottom -->
+    <path d="M78,144 L100,136 L122,144 L108,156 L100,164 L92,156 Z" fill="url(#goldTrophy)"/>
+    <!-- Winged Star overflowing sides -->
+    <g transform="translate(100,86)">
+      <path d="M-20,-6 L-82,-26 L-72,-10 L-86,-6 L-64,6 L-76,12 L-48,22 L-20,12 Z" fill="url(#goldTrophy)" stroke="#4A2500" stroke-width="1.5"/>
+      <path d="M20,-6 L82,-26 L72,-10 L86,-6 L64,6 L76,12 L48,22 L20,12 Z" fill="url(#goldTrophy)" stroke="#4A2500" stroke-width="1.5"/>
+      <circle cx="0" cy="2" r="24" fill="url(#goldTrophy)" stroke="#4A2500" stroke-width="2"/>
+      <circle cx="0" cy="2" r="18" fill="#18202A"/>
+      <polygon points="0,-12 4,-3 14,-3 6,3 9,12 0,7 -9,12 -6,3 -14,-3 -4,-3" fill="url(#goldTrophy)"/>
+    </g>
+  </g>
+</svg>

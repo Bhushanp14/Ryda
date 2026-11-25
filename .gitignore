@@ -1,0 +1,16 @@
+# Legacy folder
+android/
+
+# IDE / Build files
+.idea/
+.gradle/
+build/
+**/build/
+**/bin/
+*.iml
+.DS_Store
+*.pyc
+__pycache__/
+backend/ryda_dev.sqlite3
+backend/__pycache__/
+local.properties

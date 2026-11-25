@@ -1,0 +1,300 @@
+RYDA
+Product Requirements, App Usage & Technical Architecture
+Version 1.0 | Product baseline for Android-first development | 16 November 2026
+PRODUCT DIRECTIONAndroid-first • Motorcycle riders • Tracking-first • India launchV1 promise: record the actual ride reliably, even offline, while riders use their preferred navigation app.
+1. Document purpose
+This document defines the first release of RYDA, an Android-first motorcycle ride-tracking and rider-community application. It is intended to be the shared reference for product decisions, user experience, development, testing, deployment and future planning.
+RYDA V1 focuses on dependable ride recording and a useful ride history. It does not attempt to replace Google Maps, Mappls or other navigation applications. Riders may use their preferred navigation app while RYDA records the ride in the background.
+2. Product vision and positioning
+Vision: help motorcycle riders record, understand and share their rides, while gradually building a community-powered source of riding knowledge.
+Positioning: a Strava-inspired activity platform designed specifically for motorcycle riders. RYDA is tracking-first, Android-first and India-first at launch, with an architecture that can support international expansion.
+Record real-world motorcycle rides reliably, including when the phone is locked or offline.
+Present meaningful ride statistics and a map of the actual route travelled.
+Let riders maintain a profile and digital garage for their motorcycles.
+Build towards social features, group rides, challenges and community route discovery.
+Treat rider location data as private by default and make community contribution opt-in.
+3. Product principles and V1 boundaries
+Recording comes first: GPS reliability, battery behaviour, data integrity and recovery are more important than feature breadth.
+Offline-first: a ride must be recordable without an internet connection; synchronisation happens later.
+Navigation is external: RYDA does not calculate routes, search destinations or provide turn-by-turn or voice directions in V1.
+No planned-route storage: V1 stores the actual route recorded by GPS only.
+Safety-conscious UX: avoid interactions that encourage phone use while riding; provide clear controls before departure and after stopping.
+Privacy by default: individual ride visibility is private unless the rider deliberately shares it.
+4. Target users and launch scope
+Primary users are motorcycle riders who want to track rides, review ride statistics, maintain a riding profile and eventually connect with other riders.
+Initial launch market: India. Initial platform: Android phones. iOS is not part of V1 but should not be blocked by backend/API design.
+V1 should be suitable for solo rides, weekend rides and longer trips. It should not depend on a particular motorcycle brand, instrument cluster or connected-bike system.
+5. V1 feature requirements
+5.1 Account and authentication
+Register and log in using an agreed authentication method (email/password or phone OTP; choose one for the first implementation and document the decision).
+Securely maintain the user session and support logout.
+Provide basic account/profile editing and account deletion request handling.
+Protect APIs so a rider can access only their own private data.
+5.2 Rider profile
+Display rider name, profile photo, short bio and location at city-level if the rider chooses to provide it.
+Show ride totals such as total rides, total distance and riding time once ride history is available.
+Support public/private profile visibility as a V1-ready data field; advanced follower controls can follow later.
+5.3 Digital garage
+Allow a rider to add, edit and remove motorcycles.
+Capture make/brand, model, variant (optional), year, engine capacity (optional), nickname (optional) and photo (optional).
+Allow selection of a default motorcycle for new rides.
+A ride may optionally be associated with one motorcycle; do not block ride recording if none is selected.
+5.4 Ride recording
+Start, pause, resume and finish a ride from a clear recording screen.
+Generate a unique ride UUID on the device before recording starts, enabling offline creation and reliable later synchronisation.
+Capture timestamped latitude/longitude, horizontal accuracy, speed when available, altitude when available and a monotonically increasing sequence number.
+Show elapsed time, moving time, distance and current/average speed where reliable.
+Display a persistent Android foreground-service notification while recording.
+Continue recording when the user switches apps or locks the screen, subject to Android permissions and OS restrictions.
+Save points locally first. Network availability must not be required to record or finish a ride.
+Recover an active recording after process death where feasible; clearly handle interrupted or incomplete sessions.
+Handle poor GPS, inaccurate fixes, duplicate points, impossible jumps, pause/resume and missing sensor values without corrupting the ride.
+Allow the rider to discard a ride with confirmation.
+5.5 Ride summary and history
+Show a chronological list of completed rides.
+Ride detail should show the actual recorded route on a map, distance, elapsed time, moving time, average speed, maximum speed and elevation gain where available.
+Clearly distinguish unavailable or estimated values from measured values.
+Allow a rider to edit basic ride metadata such as ride title and motorcycle association.
+V1 visibility default is private. Sharing controls may be introduced in a controlled release after privacy and moderation basics are ready.
+5.6 Home and navigation structure
+Recommended bottom navigation: Home, Explore (can be a V1 placeholder or simple discovery landing page), Record (prominent central action), Community (can be staged), Profile. Keep the primary Start Ride action immediately accessible.
+Home: recent ride summary, total distance and prominent Start Ride action.
+Record: live tracking state and recording controls.
+History: completed rides and ride details; can be reached from Home/Profile.
+Garage: motorcycle list and motorcycle editor.
+Profile: rider information, totals and settings.
+5.7 External navigation behaviour
+RYDA does not require a destination before recording.
+The rider may switch to Google Maps, Mappls or another navigation app independently.
+RYDA should not attempt to inspect, control or depend on the external navigation app.
+The tracking foreground service continues independently while another app is in use, within Android platform limits.
+Do not imply that every navigation provider supports motorcycle-specific routing.
+6. Explicitly out of scope for V1
+In-app destination search or route planning.
+Planned route creation, planned-route storage or planned-versus-actual comparison.
+Turn-by-turn directions, voice guidance, rerouting or navigation UI.
+Community popular-route recommendations and route heatmaps.
+Social feed, following, likes, comments and direct messaging (unless separately approved as a very small pilot).
+Live group ride tracking, clubs, challenges and leaderboards.
+Automatic crash detection or guaranteed emergency response.
+Fuel, expenses, maintenance and service reminders.
+iOS application and smartwatch integration.
+7. App usage: key user journeys
+7.1 First-time setup
+Install RYDA from the Android distribution channel.
+Register or log in.
+Review the location permission explanation and grant the permissions required for ride recording.
+Add a motorcycle or choose to do this later.
+Review privacy and ride visibility settings.
+Reach Home and start a ride when ready.
+7.2 Recording a ride
+Open RYDA before starting the journey and tap Start Ride.
+RYDA checks that location services and required permissions are available.
+The foreground tracking service starts and a persistent notification appears.
+The live screen shows recording status and available ride metrics.
+The rider can lock the phone or switch to their preferred navigation app; RYDA continues recording.
+If taking a break, the rider can pause recording when safely stopped and resume when ready.
+After reaching the destination and stopping safely, return to RYDA and tap Finish Ride.
+RYDA saves the ride locally and queues it for synchronisation if online.
+7.3 Reviewing a ride
+Open Ride History.
+Select a completed ride.
+Review the route map and ride statistics.
+Correct the ride title or motorcycle selection if needed.
+Keep the ride private or use any sharing capability enabled in that release.
+7.4 Offline use
+If the phone has no mobile data, RYDA continues recording and stores ride data locally. When connectivity returns, background synchronisation uploads the ride in retryable batches. The app should show pending-sync status and avoid creating duplicate rides or points.
+8. GPS tracking and navigation architecture
+The tracking engine is independent of UI screens, map rendering, backend connectivity and external navigation applications.
+User explicitly starts a ride from a visible RYDA screen.
+Android starts a location foreground service with an ongoing notification and the required service type/permissions.
+Fused Location Provider supplies location updates according to the configured tracking profile.
+A tracking component validates fixes and assigns sequence numbers.
+Room persists the ride and GPS points locally in transactions/batches.
+The UI observes local ride state and displays live metrics.
+WorkManager schedules upload/retry work when network conditions permit.
+Django validates ownership, ride state, sequence and payload limits; server-side processing recalculates trusted ride statistics.
+PostgreSQL/PostGIS stores ride metadata and geospatial route data.
+9. GPS data and tracking rules
+Store distance internally in metres, speed in metres/second, timestamps in UTC and coordinates in WGS84 (latitude/longitude, SRID 4326). Convert to km and km/h in the UI.
+Initial sampling target may be approximately every 2–5 seconds while moving, but this must be tuned using real-device tests for battery, accuracy and smoothness. It is not a fixed guarantee.
+Record horizontal accuracy and avoid treating poor-quality fixes as authoritative.
+Filter GPS jitter and implausible jumps before calculating distance; retain raw or minimally processed observations according to the data-retention design so processing can be improved later.
+Keep elapsed time separate from moving time. Define moving-time rules explicitly and test them.
+Handle pause/resume as explicit state transitions; paused periods should not contribute to moving time or route geometry.
+Use sequence numbers and idempotent batch identifiers to make uploads retry-safe.
+Set server-side payload limits and use batch uploads rather than one HTTP request per GPS point.
+Simplify route geometry for map display while preserving the underlying point data needed for future analysis, subject to retention and privacy policy.
+10. Proposed technical stack
+Layer
+V1 choice
+Purpose
+Android app
+Kotlin + Jetpack Compose
+Native Android UI
+App architecture
+MVVM; modular feature packages
+Maintainable separation of concerns
+Location
+Google Play services Fused Location Provider
+Location updates
+Background tracking
+Android foreground service
+Active ride recording
+Local database
+Room
+Offline ride and GPS storage
+Background work
+WorkManager
+Deferred sync and retry
+Networking
+Retrofit + OkHttp
+API communication
+Preferences
+DataStore
+App settings
+Backend
+Django + Django REST Framework
+Business logic and APIs
+Database
+PostgreSQL + PostGIS / GeoDjango
+Relational and geospatial storage
+Push
+Firebase Cloud Messaging (later)
+Notifications
+Maps
+Select provider after cost, licensing and coverage evaluation
+Render route maps
+Use a modular monolith for the Django backend rather than microservices in V1. Keep the backend API versioned and avoid coupling Android screens directly to database models.
+11. Suggested repository structure
+ryda-platform/\n├── android/\n│   └── app/src/main/java/com/ryda/app/\n│       ├── core/ (common, database, location, network, permissions, design)\n│       ├── data/ (local, remote, repository)\n│       ├── domain/ (models, usecases)\n│       ├── feature/ (auth, home, tracking, history, profile, garage, settings)\n│       └── navigation/\n├── backend/\n│   ├── config/\n│   ├── apps/ (accounts, profiles, garage, rides)\n│   ├── common/\n│   └── manage.py\n├── docs/\n│   ├── PRODUCT_REQUIREMENTS.md\n│   ├── SYSTEM_ARCHITECTURE.md\n│   ├── DATABASE_SCHEMA.md\n│   ├── API_DOCUMENTATION.md\n│   ├── GPS_TRACKING_DESIGN.md\n│   ├── SECURITY_AND_PRIVACY.md\n│   └── DEVELOPMENT_ROADMAP.md\n└── README.md
+12. Initial data model
+Entity
+Key fields / notes
+User
+UUID; authentication identity; active status; created timestamp
+RiderProfile
+User one-to-one; display name; photo; bio; optional city; profile visibility
+Motorcycle
+UUID; owner; brand; model; optional variant/year/engine size/photo; primary flag
+Ride
+UUID generated on device; rider; optional motorcycle; start/end; status; distance; moving/elapsed time; average/max speed; elevation gain; visibility; timestamps
+GPSPoint
+Ride; sequence; recorded_at; latitude/longitude or PostGIS Point; accuracy; speed; altitude
+RideUploadBatch
+Optional upload bookkeeping: batch ID, ride ID, sequence range, received timestamp; support idempotency
+Use UUIDs for rides so the Android client can create a ride before it has a network connection. Add a unique constraint on (ride_id, sequence_number). Index points by ride and timestamp; add appropriate PostGIS spatial indexes for route queries.
+13. API outline
+Base path proposal: /api/v1/ . Exact authentication method and payload schemas must be finalised before implementation.
+POST /auth/register/ and POST /auth/login/ (or the selected identity-provider flow).
+GET/PATCH /profile/me/ for the rider profile.
+GET/POST/PATCH/DELETE /garage/motorcycles/ for motorcycle management.
+POST /rides/ to create/register a ride using the client-generated UUID.
+POST /rides/{ride_id}/points/batch/ to upload a batch of GPS points.
+POST /rides/{ride_id}/complete/ to mark a ride complete and trigger server-side calculations.
+GET /rides/ and GET /rides/{ride_id}/ for history and ride details.
+GET /rides/{ride_id}/summary/ for calculated statistics.
+Every endpoint must enforce authentication, ownership, validation, request-size limits and appropriate throttling. Batch uploads must be idempotent so retries do not duplicate GPS points.
+14. Security, privacy and safety
+Explain why location access is needed before requesting permissions. Request only the permissions needed for the feature and follow current Android/Google Play policies for location foreground services and background location.
+Start active ride tracking from a clear, user-initiated action while the app is visible; show an ongoing notification with a way to return to the app and stop recording.
+Use TLS for all API traffic; store secrets outside source control; apply secure token storage and refresh/revocation practices.
+Private-by-default ride visibility. Make sharing an intentional action.
+Provide a clear privacy notice describing GPS collection, purpose, retention, sharing and deletion.
+Plan data deletion/export workflows and legal review for applicable Indian data-protection requirements before public release.
+Do not expose home/work coordinates. Future public route aggregation must use opt-in contributions, masking and minimum cohort thresholds.
+Do not encourage riders to interact with the phone while moving. Avoid speed competitions or leaderboards that reward unsafe riding.
+SOS or crash detection is not a V1 promise. If added later, clearly communicate limitations and test emergency workflows.
+15. Reliability, performance and acceptance criteria
+A ride can be started, paused, resumed and finished without network access.
+GPS points are persisted locally during recording and survive ordinary app screen changes and device lock.
+The app shows a persistent notification during active tracking.
+A ride can be synchronised after connectivity returns without duplicate rides or GPS points.
+The app handles permission denial, location services disabled, weak GPS, low storage and network failure with clear messages.
+Ride history and detail screens display server-confirmed or locally available ride data with sync status.
+Distance and speed calculations are tested against known sample tracks and noisy GPS scenarios.
+Battery use and tracking quality are measured on a representative set of real Android devices; thresholds are set after prototype testing.
+No critical location data is uploaded to public endpoints or exposed to another user's account.
+16. Testing strategy
+Unit tests: distance filtering, moving-time calculation, state transitions, sequence generation, batch formation and validation.
+Android integration tests: foreground service lifecycle, Room persistence, WorkManager retry and permission flows.
+Real-device field tests: screen locked, navigation app in foreground, low signal, urban canyon, highway, ghat roads, battery saver and long rides.
+Backend tests: authentication, ownership, idempotency, batch limits, duplicate sequences, invalid coordinates and completion processing.
+End-to-end tests: record offline → finish → reconnect → sync → open ride history on another session/device.
+Privacy tests: private ride access, profile visibility, deletion and location masking behaviour.
+17. Future enhancements (not V1 commitments)
+V1.1 – Ride quality and sharing
+GPX export and import where appropriate.
+Ride photos, notes, tags and shareable ride cards.
+Improved ride analytics and monthly/yearly summaries.
+More robust ride recovery and device-specific battery optimisation.
+V2 – Rider community
+Follow riders, activity feed, likes and comments.
+Riding groups and scheduled group rides.
+Challenges, achievements and leaderboards designed not to reward dangerous speeds.
+Community moderation, blocking and reporting.
+V2.x – Community Route Intelligence
+Use opt-in, privacy-protected, aggregated GPS contributions to identify commonly travelled road segments and route corridors.
+Cluster similar journeys between broad origin/destination areas.
+Recommend popular motorcycle routes based on unique riders, recency and sample size.
+Show approximate distance, typical duration, road character and community feedback where data quality supports it.
+Do not expose individual tracks or exact start/end locations; apply home/work masking and minimum cohort thresholds.
+Clearly label community popularity as historical usage, not a guarantee of current road safety, traffic or road conditions.
+V3 – Advanced riding ecosystem
+Personalised route suggestions (popular, scenic, twisty or efficient) without necessarily building turn-by-turn navigation.
+Road condition and hazard reports with moderation and freshness indicators.
+Fuel log, expenses, maintenance history and service reminders.
+Opt-in live location sharing and carefully designed emergency/SOS workflows.
+Evaluate native navigation only if user demand, provider licensing, cost and operational complexity justify it.
+Consider iOS, smartwatch and connected-bike integrations.
+18. Development phases and deliverables
+Phase
+Deliverable
+Exit condition
+0. Product & design
+Final wireframes, permission flow, API contracts, data model and privacy decisions
+Scope and key decisions signed off
+1. Backend foundation
+Django project, auth, profiles, garage, rides API, PostgreSQL/PostGIS
+API tests pass
+2. Android foundation
+Compose app, navigation, auth, Room, networking
+User can sign in and manage profile/bike
+3. GPS engine
+Foreground service, location capture, local persistence, pause/resume/recovery
+Field-tested ride recording works offline
+4. Sync & ride history
+Batch upload, retry/idempotency, server stats, history/detail map
+Offline-to-online end-to-end flow passes
+5. Beta hardening
+Permissions, battery, privacy, security, device and field testing
+No release-blocking defects
+6. Release preparation
+Store listing, support/privacy pages, monitoring, backups and release process
+Production readiness review passed
+Schedule estimates should be set after confirming the developer capacity and prototype results. GPS reliability and Android background behaviour are the largest technical uncertainties; do not commit to a calendar solely from feature count.
+19. Decisions still to finalise before implementation
+Authentication for V1: email/password, phone OTP or a provider-based approach.
+Map provider: compare Google Maps, Mapbox and MapLibre/OSM options for India coverage, licensing, offline needs and cost.
+Minimum Android version and target SDK based on current Play requirements and device audience.
+GPS sampling profile, accuracy thresholds and moving-time definition after field tests.
+Ride visibility and whether any social sharing ships in the first public beta.
+Data retention policy for raw GPS points and account deletion/export behaviour.
+Hosting, object storage, backups, monitoring and expected launch budget.
+20. Glossary
+Term
+Meaning
+Foreground service
+Android service used for user-visible ongoing work such as an actively recorded ride.
+Fused Location Provider
+Google Play services API that provides location updates by combining available device signals.
+Room
+Android persistence library built on SQLite.
+WorkManager
+Android API for deferrable, retryable background work.
+PostGIS
+PostgreSQL extension for storing and querying geospatial data.
+Map matching
+Process of aligning noisy GPS observations to likely roads in a road network.
+Idempotency
+Design that makes retrying the same upload safe without creating duplicate records.

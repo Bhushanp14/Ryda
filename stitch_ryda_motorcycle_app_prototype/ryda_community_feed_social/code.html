@@ -1,0 +1,383 @@
+<!DOCTYPE html><html lang="en" class="dark"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RYDA — Community Feed &amp; Social</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">/** @type {import('tailwindcss').Config} */
+globalThis.tailwind = globalThis.tailwind || {};
+globalThis.tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        'accent': '#FF6B35',
+        'telemetry': '#00E5FF',
+        'success': '#10B981',
+        'warning': '#F59E0B',
+        'error': '#EF4444',
+        'border': '#30333A',
+        'subtle-border': '#252830',
+        'dark-surface': '#101114',
+        'dark-surface-elevated': '#0D0F12',
+        'dark-on-surface': '#F5F5F5',
+        'dark-surface-container': '#191B20',
+        'dark-on-surface-container': '#9A9DA5',
+        'dark-surface-container-high': '#22252B',
+        'dark-on-surface-container-high': '#F5F5F5',
+        'on-accent': '#101114',
+      },
+      borderRadius: {
+        'xs': '4px',
+        'sm': '6px',
+        'DEFAULT': '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '20px',
+        'pill': '9999px',
+        'full': '9999px',
+      },
+      spacing: {
+        'gutter-xs': '4px',
+        'gutter-sm': '8px',
+        'gutter-md': '12px',
+        'gutter-base': '16px',
+        'gutter-lg': '20px',
+        'gutter-xl': '24px',
+        'section': '32px',
+        'page-margin': '16px',
+        'dock-height': '64px',
+      },
+      fontFamily: {
+        'headline': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'body': ['"Instrument Sans"', 'sans-serif'],
+        'label': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'stat': ['"Source Code Pro"', 'monospace', 'sans-serif'],
+      },
+      fontSize: {
+        'xs': ['12px', { lineHeight: '16px' }],
+        'sm': ['14px', { lineHeight: '20px' }],
+        'base': ['16px', { lineHeight: '24px' }],
+        'lg': ['18px', { lineHeight: '26px' }],
+        'xl': ['20px', { lineHeight: '28px' }],
+        '2xl': ['24px', { lineHeight: '32px' }],
+        '3xl': ['30px', { lineHeight: '36px' }],
+        'display-lg': ['40px', { lineHeight: '48px', letterSpacing: '-0.5px', fontWeight: '800' }],
+        'display-lg-mobile': ['32px', { lineHeight: '38px', letterSpacing: '-0.3px', fontWeight: '800' }],
+        'headline-xl': ['36px', { lineHeight: '44px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'headline-xl-mobile': ['28px', { lineHeight: '34px', letterSpacing: '-0.25px', fontWeight: '700' }],
+        'headline-lg': ['28px', { lineHeight: '36px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-lg-mobile': ['24px', { lineHeight: '32px', letterSpacing: '-0.2px', fontWeight: '700' }],
+        'headline-md': ['20px', { lineHeight: '28px', letterSpacing: '-0.1px', fontWeight: '600' }],
+        'headline-sm': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '600' }],
+        'body-lg': ['16px', { lineHeight: '24px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-md': ['14px', { lineHeight: '20px', letterSpacing: '0px', fontWeight: '400' }],
+        'body-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.1px', fontWeight: '400' }],
+        'label-lg': ['14px', { lineHeight: '20px', letterSpacing: '0.1px', fontWeight: '600' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.2px', fontWeight: '600' }],
+        'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.4px', fontWeight: '600' }],
+        'stat-metric': ['32px', { lineHeight: '36px', letterSpacing: '-0.5px', fontWeight: '700' }],
+        'stat-metric-mobile': ['28px', { lineHeight: '32px', letterSpacing: '-0.4px', fontWeight: '700' }],
+        'stat-unit': ['12px', { lineHeight: '16px', letterSpacing: '0.5px', fontWeight: '700' }],
+      },
+      transitionDuration: {
+        'tap-press': '120ms',
+        'control-expand': '200ms',
+        'sheet-slide': '300ms',
+        'badge-unlock': '600ms',
+      },
+      transitionTimingFunction: {
+        'tap-press': 'cubic-bezier(0.2, 0.8, 0.4, 1)',
+        'control-expand': 'cubic-bezier(0.0, 0.0, 0.2, 1)',
+        'sheet-slide': 'cubic-bezier(0.2, 0.9, 0.3, 1)',
+        'badge-unlock': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+    },
+  },
+};
+if (typeof module !== 'undefined') module.exports = globalThis.tailwind.config;
+</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;family=Source+Code+Pro:wght@600;700;800&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet">
+  <style>
+    .material-symbols-outlined { display: inline-block; width: 1em; height: 1em; line-height: 1 !important; box-sizing: content-box; overflow: hidden; white-space: nowrap; direction: ltr; vertical-align: middle; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes heartBurst { 0% { transform: scale(1); } 50% { transform: scale(1.35); } 100% { transform: scale(1); } }
+    .heart-pop { animation: heartBurst 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  </style>
+</head>
+<body class="bg-dark-surface text-dark-on-surface antialiased select-none font-body">
+
+  <div class="w-full max-w-[390px] mx-auto min-h-[884px] bg-dark-surface border-x border-border flex flex-col justify-between relative overflow-hidden pb-20" data-stitch-vh="min-h-[884px]===min-h-screen">
+
+    <!-- Header & Feed Switcher Tabs (Following / Discover) -->
+    <header class="sticky top-0 z-30 bg-dark-surface/95 backdrop-blur-sm border-b border-border px-4 pt-3 pb-2.5">
+      <div class="flex items-center justify-between mb-2.5">
+        <h1 class="font-headline text-headline-sm text-white">Community</h1>
+        <button type="button" onclick="openCreatePostModal()" class="px-2.5 py-1.5 rounded-xl bg-accent hover:bg-orange-500 text-white font-label text-xs font-semibold flex items-center gap-1 active:scale-95 transition shadow-md shadow-orange-950/40">
+          <span class="material-symbols-outlined text-sm">edit</span>
+          <span>Post</span>
+        </button>
+      </div>
+
+      <!-- Segmented Pill Feed Switcher -->
+      <div class="flex p-1 bg-dark-surface-container-high border border-border rounded-xl">
+        <button id="feed-following" onclick="switchFeedTab(&#39;following&#39;)" class="flex-1 py-1.5 rounded-lg bg-accent text-white font-label text-xs font-semibold text-center transition">
+          Following
+        </button>
+        <button id="feed-discover" onclick="switchFeedTab(&#39;discover&#39;)" class="flex-1 py-1.5 rounded-lg text-dark-on-surface-container hover:text-white font-label text-xs text-center transition">
+          Discover
+        </button>
+      </div>
+    </header>
+
+    <!-- Scrollable Feed Posts -->
+    <main class="flex-1 px-4 py-3 space-y-4 overflow-y-auto no-scrollbar">
+
+      <!-- FEED POST 1: Published Ride Post with Route & Telemetry -->
+      <article class="bg-dark-surface-container border border-border rounded-2xl p-4 shadow-xl">
+        <!-- Rider Header -->
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl overflow-hidden border border-border">
+              <img src="https://lh3.googleusercontent.com/aida/ALJJyrDUMvDWe_N4OHWlExXvkbfWcrBN4NZNo73KzC4bVsuUl3N8zJ-x1UY65Kyv2YIOMJWU1IPJiOPnBXob9Lg4XX9dk_sNOGPZlCCi3pB-5sjhP7_FC0Tm-341w_MzjKoe7lqYp6JQ-q2dk6IQdQQ7BxYVZ6xB2UJ3IZxrO6FmZWGRKB-kJ_zvAef2fxXWUyFzarzq0a9WUcdPQ8LLXRlrQHAQ40R97OvboJS_JawxXUw5BuclK4A" alt="Aarav Sen" class="w-full h-full object-cover">
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-headline text-xs font-bold text-white">Aarav Sen</span>
+                <span class="px-1.5 py-0.2 rounded bg-zinc-800 text-[10px] font-label text-accent">Pune Riders</span>
+              </div>
+              <span class="text-[11px] font-body text-dark-on-surface-container">2h ago • Mahabaleshwar Cloud Tour</span>
+            </div>
+          </div>
+          <!-- Follow button -->
+          <button type="button" onclick="toggleFollow(this)" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-dark-on-surface hover:text-white font-label text-[11px] transition active:scale-95">
+            Follow
+          </button>
+        </div>
+
+        <p class="font-body text-xs text-dark-on-surface mb-3">
+          Early morning ghat blast with 4 companions. The new tarmac past Wai was exceptional! KTM Duke 390 had endless mid-range punch out of hairpins.
+        </p>
+
+        <!-- Route & Telemetry Card Block inside post -->
+        <div class="rounded-xl overflow-hidden border border-border/80 bg-dark-surface mb-3">
+          <div class="h-32 w-full relative">
+            <img src="https://lh3.googleusercontent.com/aida/ALJJyrAbI5pb1fCm-kpA65o-iw80igivo_Nwz9DmSRcTpmp-jh5BgzAhUbm_EGtRUOphYDxIJ0S10MRaGbotLLjeoiAKnioaBhUFXZSHL5TZgf9U3IXdEWHWCkm6jZOhQ32dV4TsjyiKSv9RWZuh9eb2zurGPRDMvX9AUjqbvRFRX-u3gtfmssINBubI4wlk93BhzsjbeDFnyKyozx72o50yuEInfoNNij2bjb2IYc_6tKyhCgnDKmsf" alt="KTM Duke 390 Ride" class="w-full h-full object-cover brightness-90">
+            <div class="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-label text-accent font-bold">
+              VERIFIED RIDE LOG
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 p-2.5 text-center text-xs">
+            <div>
+              <span class="text-[10px] text-dark-on-surface-container block">Distance</span>
+              <span class="font-stat font-bold text-white">124.5 KM</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-dark-on-surface-container block">Moving</span>
+              <span class="font-stat font-bold text-white">02:22:10</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-dark-on-surface-container block">Avg Speed</span>
+              <span class="font-stat font-bold text-telemetry">52.8 KM/H</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Action Buttons (Like, Comment, Share) -->
+        <div class="flex items-center justify-between pt-2 border-t border-border/60 text-xs text-dark-on-surface-container">
+          <button type="button" onclick="handleLike(this)" class="flex items-center gap-1.5 hover:text-pink-400 transition active:scale-95">
+            <span class="material-symbols-outlined text-base">favorite_border</span>
+            <span class="font-stat text-xs">48</span>
+          </button>
+
+          <button type="button" onclick="alert(&#39;Viewing 14 rider comments&#39;)" class="flex items-center gap-1.5 hover:text-accent transition active:scale-95">
+            <span class="material-symbols-outlined text-base">chat_bubble_outline</span>
+            <span class="font-stat text-xs">14</span>
+          </button>
+
+          <button type="button" onclick="alert(&#39;Ride post link copied to clipboard&#39;)" class="flex items-center gap-1.5 hover:text-white transition active:scale-95">
+            <span class="material-symbols-outlined text-base">share</span>
+            <span class="text-xs font-label">Share</span>
+          </button>
+
+          <span class="text-[10px] text-zinc-500 font-stat">KTM Duke 390</span>
+        </div>
+      </article>
+
+      <!-- FEED POST 2: Community Photo Post -->
+      <article class="bg-dark-surface-container border border-border rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl overflow-hidden border border-border">
+              <img src="https://lh3.googleusercontent.com/aida/ALJJyrAFIJsBHM_I3ZAEKelKgNvP3dbp1HtCyFMNhD23i5oI202RSUiuq2-rMrtoJ36HzSu7bXOcqcdOOCuiUR9PzrbZy3RAg0co6AzbTuOkMELf9DWQYxc5W2IgAVRDpTYv1B2J5sr-H4cVi3JfO2ek__GQpIQtz9_pqIb6lcKDHDZs-fCG1IFWPGzgxP120iSVZ1SF469_OjIupw4Zt7T1sMfLXxMoh8ct8QSgBboFTApEfSxtdF0" alt="Priya Sharma" class="w-full h-full object-cover">
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-headline text-xs font-bold text-white">Priya Sharma</span>
+                <span class="px-1.5 py-0.2 rounded bg-zinc-800 text-[10px] font-label text-emerald-400">Verified</span>
+              </div>
+              <span class="text-[11px] font-body text-dark-on-surface-container">4h ago • Goa Coastal Highway</span>
+            </div>
+          </div>
+          <button type="button" onclick="toggleFollow(this)" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-dark-on-surface hover:text-white font-label text-[11px] transition active:scale-95">
+            Follow
+          </button>
+        </div>
+
+        <p class="font-body text-xs text-dark-on-surface mb-3">
+          Sunrise coastal cruise along south Goa backwaters. Nothing clears the head like cool morning salt spray and open tarmac. 🌊🏍️
+        </p>
+
+        <div class="rounded-xl overflow-hidden border border-border/80 h-44 mb-3">
+          <img src="https://lh3.googleusercontent.com/aida/ALJJyrB1i-F8wH1UcvqrUSQ113KSeDG8DXwL8gbepJSUuvpA4nwB9P4CMvtATq1a0QIIgVCq7oKJ4fbc1cM4dv5vqNISyqeBIPcP1ONW_WDhv8Vc48C86w7ps_89ZaPXJltZjAnshWlOduPaMeX7V4ax9YeTq_NAojKfo_DGowAsdItAKwdJsABE4xMtA6RyII4Sx4przk4HhGOcO9vusIWgrFR3fICoqozahanL8xj4AQ5jBkUKb51h37IGLtgOpw" alt="Goa Sunrise Ride" class="w-full h-full object-cover">
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-border/60 text-xs text-dark-on-surface-container">
+          <button type="button" onclick="handleLike(this)" class="flex items-center gap-1.5 hover:text-pink-400 transition active:scale-95">
+            <span class="material-symbols-outlined text-base">favorite_border</span>
+            <span class="font-stat text-xs">82</span>
+          </button>
+
+          <button type="button" onclick="alert(&#39;Viewing 21 comments&#39;)" class="flex items-center gap-1.5 hover:text-accent transition active:scale-95">
+            <span class="material-symbols-outlined text-base">chat_bubble_outline</span>
+            <span class="font-stat text-xs">21</span>
+          </button>
+
+          <button type="button" onclick="alert(&#39;Post shared&#39;)" class="flex items-center gap-1.5 hover:text-white transition active:scale-95">
+            <span class="material-symbols-outlined text-base">share</span>
+            <span class="text-xs font-label">Share</span>
+          </button>
+
+          <span class="text-[10px] text-zinc-500 font-stat">Honda CB350</span>
+        </div>
+      </article>
+
+    </main>
+
+    <!-- Create Post Bottom Sheet Modal Mockup -->
+    <div id="post-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex flex-col justify-end">
+      <div class="w-full max-w-[390px] mx-auto bg-dark-surface-container border-t border-border rounded-t-3xl p-5 shadow-2xl space-y-3.5">
+        <div class="w-12 h-1 rounded-full bg-zinc-700 mx-auto"></div>
+        <div class="flex items-center justify-between pb-2 border-b border-border">
+          <h3 class="font-headline text-headline-sm text-white">Create Community Post</h3>
+          <button onclick="closeCreatePostModal()" class="text-dark-on-surface-container hover:text-white">
+            <span class="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <!-- Post Type Selector -->
+          <div class="flex gap-2">
+            <button class="flex-1 py-2 rounded-xl bg-accent text-white font-label font-bold text-center">Share Completed Ride</button>
+            <button class="flex-1 py-2 rounded-xl bg-dark-surface text-dark-on-surface-container font-label text-center border border-border">Photo / Thought</button>
+          </div>
+
+          <div>
+            <label class="font-label text-dark-on-surface-container block mb-1">Select Completed Ride</label>
+            <select class="w-full bg-dark-surface border border-subtle-border rounded-xl p-2.5 text-white outline-none">
+              <option>Mumbai to Lonavala Ghat Run (88.4 KM • Himalayan 450)</option>
+              <option>Nashik to Igatpuri Morning Mist (114.2 KM)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="font-label text-dark-on-surface-container block mb-1">Caption</label>
+            <textarea rows="2" placeholder="Share route highlights, tire grip, scenic stops..." class="w-full bg-dark-surface border border-subtle-border rounded-xl p-2.5 text-white outline-none"></textarea>
+          </div>
+
+          <button onclick="submitNewPost()" class="w-full py-3 rounded-xl bg-accent text-white font-headline font-bold text-xs shadow-lg shadow-orange-950/60 mt-2">
+            PUBLISH TO COMMUNITY
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Navigation Dock -->
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] h-16 bg-dark-surface-container-high/95 backdrop-blur-md border-t border-border z-40 px-3 flex items-center justify-between">
+      <a href="../home-dashboard/HomeDashboard.html" class="flex-1 flex flex-col items-center justify-center text-dark-on-surface-container py-1">
+        <span class="material-symbols-outlined text-xl">home</span>
+        <span class="font-label text-[10px] mt-0.5">Home</span>
+      </a>
+      <a href="../explore-hub/ExploreHub.html" class="flex-1 flex flex-col items-center justify-center text-dark-on-surface-container py-1">
+        <span class="material-symbols-outlined text-xl">explore</span>
+        <span class="font-label text-[10px] mt-0.5">Explore</span>
+      </a>
+      <div class="relative -top-5 flex-shrink-0 px-2">
+        <a href="../active-ride-tracking/ActiveRideTracking.html" class="w-14 h-14 rounded-full bg-accent text-white flex items-center justify-center shadow-xl border-4 border-dark-surface active:scale-90 transition">
+          <span class="material-symbols-outlined text-2xl font-bold">sports_motorsports</span>
+        </a>
+      </div>
+      <a href="../community-feed/CommunityFeed.html" class="flex-1 flex flex-col items-center justify-center text-accent py-1">
+        <span class="material-symbols-outlined text-xl">groups</span>
+        <span class="font-label text-[10px] font-bold mt-0.5">Community</span>
+      </a>
+      <a href="../rider-profile/RiderProfile.html" class="flex-1 flex flex-col items-center justify-center text-dark-on-surface-container py-1">
+        <span class="material-symbols-outlined text-xl">person</span>
+        <span class="font-label text-[10px] mt-0.5">Profile</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+    function switchFeedTab(tab) {
+      const btnF = document.getElementById('feed-following');
+      const btnD = document.getElementById('feed-discover');
+      if (tab === 'following') {
+        btnF.classList.add('bg-accent', 'text-white');
+        btnF.classList.remove('text-dark-on-surface-container');
+        btnD.classList.remove('bg-accent', 'text-white');
+        btnD.classList.add('text-dark-on-surface-container');
+      } else {
+        btnD.classList.add('bg-accent', 'text-white');
+        btnD.classList.remove('text-dark-on-surface-container');
+        btnF.classList.remove('bg-accent', 'text-white');
+        btnF.classList.add('text-dark-on-surface-container');
+      }
+    }
+
+    function handleLike(btn) {
+      const icon = btn.querySelector('.material-symbols-outlined');
+      const count = btn.querySelector('.font-stat');
+      let num = parseInt(count.textContent);
+      if (icon.textContent === 'favorite_border') {
+        icon.textContent = 'favorite';
+        icon.classList.add('text-pink-500', 'heart-pop');
+        count.textContent = num + 1;
+      } else {
+        icon.textContent = 'favorite_border';
+        icon.classList.remove('text-pink-500', 'heart-pop');
+        count.textContent = num - 1;
+      }
+    }
+
+    function toggleFollow(btn) {
+      if (btn.textContent.trim() === 'Follow') {
+        btn.textContent = 'Following';
+        btn.classList.add('bg-accent', 'text-white');
+        btn.classList.remove('bg-zinc-800');
+      } else {
+        btn.textContent = 'Follow';
+        btn.classList.remove('bg-accent', 'text-white');
+        btn.classList.add('bg-zinc-800');
+      }
+    }
+
+    function openCreatePostModal() {
+      document.getElementById('post-modal').classList.remove('hidden');
+    }
+    function closeCreatePostModal() {
+      document.getElementById('post-modal').classList.add('hidden');
+    }
+    function submitNewPost() {
+      alert("Post published successfully to community feed!");
+      closeCreatePostModal();
+    }
+  </script>
+
+
+</body></html>
