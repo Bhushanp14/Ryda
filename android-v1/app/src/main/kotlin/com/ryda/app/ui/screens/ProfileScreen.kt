@@ -40,6 +40,7 @@ import com.ryda.app.core.models.Ride
 import com.ryda.app.core.models.RiderProfile
 import com.ryda.app.core.models.RiderTag
 import com.ryda.app.core.models.getBadgeAssetUrl
+import com.ryda.app.core.network.RetrofitBuilder
 import com.ryda.app.data.repository.RydaRepository
 import com.ryda.app.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -163,9 +164,12 @@ fun ProfileScreen(
                                 .border(2.dp, SafetyAmber, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (profile.avatarUrl.isNotBlank()) {
+                            val resolvedAvatar = remember(profile.avatarUrl) {
+                                RetrofitBuilder.resolveMediaUrl(profile.avatarUrl)
+                            }
+                            if (resolvedAvatar.isNotBlank()) {
                                 RideImageThumbnail(
-                                    photoUri = profile.avatarUrl,
+                                    photoUri = resolvedAvatar,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clip(CircleShape)
@@ -332,7 +336,7 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // ── 3. RIDING STATISTICS SUMMARY (2-Column Grid) ─────────────────────
+        // ── 3. RIDING STATISTICS SUMMARY (3-Column Row) ─────────────────────
         Text(
             text = "RIDING STATISTICS SUMMARY",
             color = SafetyAmber,
@@ -342,37 +346,25 @@ fun ProfileScreen(
         )
         Spacer(modifier = Modifier.height(6.dp))
 
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                StatCard(
-                    label = "Total Distance",
-                    value = String.format(Locale.US, "%.1f km", profile.totalDistanceKm),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Total Riding Time",
-                    value = String.format(Locale.US, "%.1f hrs", profile.totalTimeHours),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                StatCard(
-                    label = "Completed Rides",
-                    value = "${profile.totalRides}",
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    label = "Longest Ride",
-                    value = String.format(Locale.US, "%.1f km", profile.longestRideKm),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StatCard(
+                label = "Distance",
+                value = String.format(Locale.US, "%.1f km", profile.totalDistanceKm),
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                label = "Time",
+                value = String.format(Locale.US, "%.1f hrs", profile.totalTimeHours),
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                label = "Rides",
+                value = "${profile.totalRides}",
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))

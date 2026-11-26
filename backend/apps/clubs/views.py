@@ -159,26 +159,31 @@ class ClubLeaderboardView(views.APIView):
         club = get_object_or_404(Club, id=club_id)
         period = request.query_params.get('period', 'monthly').lower()
 
-        members = ClubMember.objects.filter(club=club).select_related('user', 'user__rider_profile')
+        member_users = set(ClubMember.objects.filter(club=club).values_list('user', flat=True))
+        if club.created_by_id:
+            member_users.add(club.created_by_id)
+
+        users = User.objects.filter(id__in=member_users).select_related('rider_profile')
 
         leaderboard_entries = []
         now = timezone.now()
-        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         from apps.rides.models import Ride, RideStatus
         from django.db.models import Sum
 
-        for m in members:
-            u = m.user
+        for u in users:
             profile = getattr(u, 'rider_profile', None)
             disp_name = profile.display_name if profile else u.username
             avatar = profile.avatar_url if profile else ''
+            membership = ClubMember.objects.filter(club=club, user=u).first()
+            role = membership.role if membership else ('LEADER' if club.created_by == u else 'MEMBER')
 
             if period == 'monthly':
                 dist_m = Ride.objects.filter(
                     rider=u,
                     status=RideStatus.COMPLETED,
-                    start_time__gte=start_of_month
+                    start_time__year=now.year,
+                    start_time__month=now.month
                 ).aggregate(total=Sum('total_distance_meters'))['total'] or 0.0
             else: # 'all_time'
                 dist_m = Ride.objects.filter(
@@ -192,7 +197,7 @@ class ClubLeaderboardView(views.APIView):
                 'username': u.username,
                 'display_name': disp_name,
                 'avatar_url': avatar,
-                'role': m.role,
+                'role': role,
                 'distance_km': round(dist_km, 1)
             })
 

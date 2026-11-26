@@ -366,3 +366,5 @@ def evaluate_user_achievements(user):
                 related_id=ach.key
             )
         user_ach.save()
+
+    return UserAchievement.objects.filter(user=user).select_related('achievement')
