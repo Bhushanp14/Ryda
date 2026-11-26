@@ -239,9 +239,33 @@ class RydaRepository private constructor(private val context: Context) {
                 if (savedAvatar != null) {
                     updatedProfile = profile.copy(avatarUrl = savedAvatar)
                 }
+
+                try {
+                    val tokenDs = TokenDataStore.getInstance(context)
+                    if (tokenDs.isLoggedIn()) {
+                        val api = RetrofitBuilder.getService(tokenDs)
+                        val uri = Uri.parse(profile.avatarUrl)
+                        val stream = context.contentResolver.openInputStream(uri)
+                        if (stream != null) {
+                            val bytes = stream.readBytes()
+                            stream.close()
+                            val reqFile = bytes.toRequestBody("image/*".toMediaTypeOrNull())
+                            val body = MultipartBody.Part.createFormData("avatar", "avatar.jpg", reqFile)
+                            val uploadResp = api.uploadProfileAvatar(body)
+                            if (uploadResp.isSuccessful && !uploadResp.body()?.avatarUrl.isNullOrBlank()) {
+                                val serverAvatar = uploadResp.body()!!.avatarUrl!!
+                                updatedProfile = updatedProfile.copy(avatarUrl = serverAvatar)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("RYDA_REPO", "Avatar multipart upload error: ${e.message}")
+                }
             }
+
             db.updateProfile(updatedProfile)
             _riderProfile.value = db.getRiderProfile()
+
             try {
                 val tokenDs = TokenDataStore.getInstance(context)
                 if (tokenDs.isLoggedIn()) {
@@ -250,6 +274,7 @@ class RydaRepository private constructor(private val context: Context) {
                         "display_name" to updatedProfile.displayName,
                         "bio" to updatedProfile.bio,
                         "city" to updatedProfile.city,
+                        "avatar_url" to updatedProfile.avatarUrl,
                         "is_profile_public" to updatedProfile.isProfilePublic.toString()
                     ))
                 }

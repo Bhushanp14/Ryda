@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.contrib.auth.models import User
 from rest_framework import views, generics, permissions, status
 from rest_framework.response import Response
 from .models import Club, ClubMember, RidingEvent, EventRsvp
