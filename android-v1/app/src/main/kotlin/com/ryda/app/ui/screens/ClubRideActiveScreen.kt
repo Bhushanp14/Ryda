@@ -43,12 +43,15 @@ import com.ryda.app.core.location.NavigationSoundMode
 import com.ryda.app.core.location.PolylineDecoder
 import com.ryda.app.core.location.RouteGuidanceCalculator
 import com.ryda.app.core.models.ClubRideSession
+import com.ryda.app.core.service.ClubRideShutdownCoordinator
 import com.ryda.app.core.service.LiveLocationService
 import com.ryda.app.core.service.RideTrackingService
 import com.ryda.app.core.sync.SyncCoordinator
 import com.ryda.app.data.repository.RydaRepository
 import com.ryda.app.ui.theme.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ClubRideActiveScreen(

@@ -38,6 +38,7 @@ import com.ryda.app.core.auth.AuthRepository
 import com.ryda.app.core.auth.TokenDataStore
 import com.ryda.app.core.models.Club
 import com.ryda.app.core.models.Ride
+import com.ryda.app.core.service.ClubRideShutdownCoordinator
 import com.ryda.app.core.models.RideStatus
 import com.ryda.app.core.service.LiveLocationService
 import com.ryda.app.core.service.RideTrackingService
@@ -599,17 +600,31 @@ fun AppNavigation() {
                                                 onOpenRideHud = { isHudOpen = true },
                                                 onFinishMyRide = {
                                                     val finishedId = trackingState.currentRideId
-                                                    RideTrackingService.finishRide(context)
-                                                    LiveLocationService.stopSharing(context)
-                                                    com.ryda.app.core.sync.SyncCoordinator.getInstance(context).triggerSync()
-                                                    activeGroupMapSession = null
-                                                    if (finishedId != null) {
-                                                        showAddPhotosForRideId = finishedId
-                                                    }
+                                                    ClubRideShutdownCoordinator.handleSessionEnd(
+                                                        context = context,
+                                                        repository = repository,
+                                                        clubId = activeClub?.id,
+                                                        sessionId = activeGroupMapSession?.id,
+                                                        isAdminEnding = false,
+                                                        onComplete = {
+                                                            activeGroupMapSession = null
+                                                            if (finishedId != null) {
+                                                                showAddPhotosForRideId = finishedId
+                                                            }
+                                                        }
+                                                    )
                                                 },
                                                 onClubRideEnded = {
-                                                    LiveLocationService.stopSharing(context)
-                                                    activeGroupMapSession = null
+                                                    ClubRideShutdownCoordinator.handleSessionEnd(
+                                                        context = context,
+                                                        repository = repository,
+                                                        clubId = activeClub?.id,
+                                                        sessionId = activeGroupMapSession?.id,
+                                                        isAdminEnding = false,
+                                                        onComplete = {
+                                                            activeGroupMapSession = null
+                                                        }
+                                                    )
                                                 }
                                             )
                                         }
