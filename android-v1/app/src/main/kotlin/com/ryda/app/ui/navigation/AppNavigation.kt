@@ -39,6 +39,7 @@ import com.ryda.app.core.auth.TokenDataStore
 import com.ryda.app.core.models.Club
 import com.ryda.app.core.models.Ride
 import com.ryda.app.core.models.RideStatus
+import com.ryda.app.core.service.LiveLocationService
 import com.ryda.app.core.service.RideTrackingService
 import com.ryda.app.data.repository.RydaRepository
 import com.ryda.app.ui.components.NotificationDrawer
@@ -159,6 +160,10 @@ fun AppNavigation() {
 
     // ── Club navigation state ──────────────────────────────────────────────────
     var selectedClub by remember { mutableStateOf<Club?>(null) }
+    var selectedClubRideSessionId by remember { mutableStateOf<String?>(null) }
+    var activeGroupMapSession by remember { mutableStateOf<com.ryda.app.core.models.ClubRideSession?>(null) }
+    var showCreateClubRide by remember { mutableStateOf(false) }
+    var showClubRideAdmin by remember { mutableStateOf(false) }
 
     // Permission launcher used in main app (for starting ride without explainer)
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -571,18 +576,92 @@ fun AppNavigation() {
                                 NavTab.RECORD -> { /* handled by FAB → HUD */ }
 
                                 NavTab.CLUBS -> {
-                                    if (selectedClub != null) {
-                                        ClubDetailScreen(
-                                            club = selectedClub!!,
-                                            repository = repository,
-                                            onBackClick = { selectedClub = null }
-                                        )
-                                    } else {
-                                        ClubsScreen(
-                                            repository = repository,
-                                            completedRidesCount = rides.size,
-                                            onClubClick = { club -> selectedClub = club }
-                                        )
+                                    val activeClub = selectedClub
+                                    when {
+                                        activeClub != null && showCreateClubRide -> {
+                                            CreateClubRideScreen(
+                                                club = activeClub,
+                                                repository = repository,
+                                                onBackClick = { showCreateClubRide = false },
+                                                onCreated = { created ->
+                                                    showCreateClubRide = false
+                                                    selectedClubRideSessionId = created.id
+                                                }
+                                            )
+                                        }
+                                        activeClub != null && activeGroupMapSession != null -> {
+                                            ClubRideActiveScreen(
+                                                session = activeGroupMapSession!!,
+                                                isClubLeader = activeClub.myRole == "LEADER",
+                                                repository = repository,
+                                                tokenDataStore = tokenDataStore,
+                                                onBackClick = { activeGroupMapSession = null },
+                                                onOpenRideHud = { isHudOpen = true },
+                                                onFinishMyRide = {
+                                                    val finishedId = trackingState.currentRideId
+                                                    RideTrackingService.finishRide(context)
+                                                    LiveLocationService.stopSharing(context)
+                                                    com.ryda.app.core.sync.SyncCoordinator.getInstance(context).triggerSync()
+                                                    activeGroupMapSession = null
+                                                    if (finishedId != null) {
+                                                        showAddPhotosForRideId = finishedId
+                                                    }
+                                                },
+                                                onClubRideEnded = {
+                                                    LiveLocationService.stopSharing(context)
+                                                    activeGroupMapSession = null
+                                                }
+                                            )
+                                        }
+                                        activeClub != null && selectedClubRideSessionId != null && showClubRideAdmin -> {
+                                            ClubRideAdminScreen(
+                                                club = activeClub,
+                                                sessionId = selectedClubRideSessionId!!,
+                                                repository = repository,
+                                                onBackClick = { showClubRideAdmin = false }
+                                            )
+                                        }
+                                        activeClub != null && selectedClubRideSessionId != null -> {
+                                            ClubRideSessionScreen(
+                                                club = activeClub,
+                                                sessionId = selectedClubRideSessionId!!,
+                                                repository = repository,
+                                                onBackClick = {
+                                                    selectedClubRideSessionId = null
+                                                    showClubRideAdmin = false
+                                                },
+                                                onOpenAdminRoster = { showClubRideAdmin = true },
+                                                onOpenActiveRideHud = { isHudOpen = true },
+                                                onOpenGroupMap = { s -> activeGroupMapSession = s }
+                                            )
+                                        }
+                                        activeClub != null -> {
+                                            ClubDetailScreen(
+                                                club = activeClub,
+                                                repository = repository,
+                                                onBackClick = {
+                                                    selectedClub = null
+                                                    selectedClubRideSessionId = null
+                                                    showCreateClubRide = false
+                                                    showClubRideAdmin = false
+                                                },
+                                                onOpenClubRide = { refreshedClub, session ->
+                                                    selectedClub = refreshedClub
+                                                    selectedClubRideSessionId = session.id
+                                                },
+                                                onCreateClubRide = { refreshedClub ->
+                                                    selectedClub = refreshedClub
+                                                    showCreateClubRide = true
+                                                }
+                                            )
+                                        }
+                                        else -> {
+                                            ClubsScreen(
+                                                repository = repository,
+                                                completedRidesCount = rides.size,
+                                                onClubClick = { club -> selectedClub = club }
+                                            )
+                                        }
                                     }
                                 }
 

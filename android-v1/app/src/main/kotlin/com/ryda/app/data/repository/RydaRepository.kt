@@ -116,30 +116,32 @@ class RydaRepository private constructor(private val context: Context) {
                 val finalMoto = motorcycle.copy(imageUri = persistentImageUri)
 
                 val tokenDs = TokenDataStore.getInstance(context)
-                if (!tokenDs.isLoggedIn()) throw IllegalStateException("User not logged in")
-
-                val api = RetrofitBuilder.getService(tokenDs)
-                val resp = api.createMotorcycle(
-                    com.ryda.app.core.network.MotorcycleRequest(
-                        brand = finalMoto.brand,
-                        make = finalMoto.brand,
-                        model = finalMoto.model,
-                        year = finalMoto.year,
-                        nickname = finalMoto.nickname ?: "",
-                        engineCc = finalMoto.engineCc,
-                        isPrimary = finalMoto.isPrimary
-                    )
-                )
-                if (resp.isSuccessful) {
-                    db.insertMotorcycle(finalMoto)
-                    _motorcycles.value = db.getAllMotorcycles()
-                } else {
-                    val err = resp.errorBody()?.string() ?: "HTTP ${resp.code()}"
-                    throw RuntimeException("Failed to save motorcycle on server: $err")
+                if (tokenDs.isLoggedIn()) {
+                    val api = RetrofitBuilder.getService(tokenDs)
+                    try {
+                        api.createMotorcycle(
+                            com.ryda.app.core.network.MotorcycleRequest(
+                                brand = finalMoto.brand,
+                                make = finalMoto.brand,
+                                model = finalMoto.model,
+                                year = finalMoto.year,
+                                nickname = finalMoto.nickname ?: "",
+                                engineCc = finalMoto.engineCc,
+                                isPrimary = finalMoto.isPrimary
+                            )
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.w("RYDA_REPO", "Server createMotorcycle non-fatal error: ${e.message}")
+                    }
                 }
+                db.insertMotorcycle(finalMoto)
+                _motorcycles.value = db.getAllMotorcycles()
             } catch (e: Exception) {
-                android.util.Log.e("RYDA_REPO", "addMotorcycle failed: ${e.message}", e)
-                throw e
+                android.util.Log.e("RYDA_REPO", "addMotorcycle error: ${e.message}", e)
+                try {
+                    db.insertMotorcycle(motorcycle)
+                    _motorcycles.value = db.getAllMotorcycles()
+                } catch (_: Exception) {}
             }
         }
     }
@@ -155,31 +157,33 @@ class RydaRepository private constructor(private val context: Context) {
                 val finalMoto = motorcycle.copy(imageUri = persistentImageUri)
 
                 val tokenDs = TokenDataStore.getInstance(context)
-                if (!tokenDs.isLoggedIn()) throw IllegalStateException("User not logged in")
-
-                val api = RetrofitBuilder.getService(tokenDs)
-                val resp = api.patchMotorcycle(
-                    finalMoto.id,
-                    com.ryda.app.core.network.MotorcycleRequest(
-                        brand = finalMoto.brand,
-                        make = finalMoto.brand,
-                        model = finalMoto.model,
-                        year = finalMoto.year,
-                        nickname = finalMoto.nickname ?: "",
-                        engineCc = finalMoto.engineCc,
-                        isPrimary = finalMoto.isPrimary
-                    )
-                )
-                if (resp.isSuccessful) {
-                    db.updateMotorcycle(finalMoto)
-                    _motorcycles.value = db.getAllMotorcycles()
-                } else {
-                    val err = resp.errorBody()?.string() ?: "HTTP ${resp.code()}"
-                    throw RuntimeException("Failed to update motorcycle on server: $err")
+                if (tokenDs.isLoggedIn()) {
+                    val api = RetrofitBuilder.getService(tokenDs)
+                    try {
+                        api.patchMotorcycle(
+                            finalMoto.id,
+                            com.ryda.app.core.network.MotorcycleRequest(
+                                brand = finalMoto.brand,
+                                make = finalMoto.brand,
+                                model = finalMoto.model,
+                                year = finalMoto.year,
+                                nickname = finalMoto.nickname ?: "",
+                                engineCc = finalMoto.engineCc,
+                                isPrimary = finalMoto.isPrimary
+                            )
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.w("RYDA_REPO", "Server patchMotorcycle non-fatal error: ${e.message}")
+                    }
                 }
+                db.updateMotorcycle(finalMoto)
+                _motorcycles.value = db.getAllMotorcycles()
             } catch (e: Exception) {
-                android.util.Log.e("RYDA_REPO", "updateMotorcycle failed: ${e.message}", e)
-                throw e
+                android.util.Log.e("RYDA_REPO", "updateMotorcycle error: ${e.message}", e)
+                try {
+                    db.updateMotorcycle(motorcycle)
+                    _motorcycles.value = db.getAllMotorcycles()
+                } catch (_: Exception) {}
             }
         }
     }
@@ -366,6 +370,7 @@ class RydaRepository private constructor(private val context: Context) {
                 var persistedCount = 0
                 remoteRides.forEach { r ->
                     try {
+                        if (r.status != "COMPLETED") return@forEach
                         val existing = db.getRideById(r.id)
                         val startTimeMs = parseIsoTimestamp(r.startTime)
                         val endTimeMs = r.endTime?.let { parseIsoTimestamp(it) }
@@ -407,7 +412,8 @@ class RydaRepository private constructor(private val context: Context) {
                             elevationLossMeters = elevLoss,
                             syncStatus = SyncStatus.SYNCED,
                             isPrivate = r.isPrivate,
-                            photoUri = finalPhotoUri
+                            photoUri = finalPhotoUri,
+                            clubRideSessionId = r.clubRideSessionId ?: existing?.clubRideSessionId
                         )
 
                         if (existing == null) {
@@ -964,7 +970,13 @@ class RydaRepository private constructor(private val context: Context) {
             val tokenDs = TokenDataStore.getInstance(context)
             val api = RetrofitBuilder.getService(tokenDs)
             val res = api.getClubDetail(clubId)
-            if (res.isSuccessful) res.body() else null
+            if (res.isSuccessful && res.body() != null) {
+                val remoteClub = res.body()!!
+                db.insertClub(remoteClub)
+                remoteClub
+            } else {
+                null
+            }
         } catch (_: Exception) {
             db.getAllClubs().firstOrNull { it.id == clubId }
         }
@@ -1061,6 +1073,94 @@ class RydaRepository private constructor(private val context: Context) {
         db.insertRallyEvent(event)
         return event
     }
+
+    // ── Club Ride Sessions (Phase 3) ───────────────────────────────────────────
+
+    private fun <T> parseApiError(response: retrofit2.Response<T>): String {
+        val raw = try { response.errorBody()?.string() } catch (_: Exception) { null }
+        if (!raw.isNullOrBlank()) {
+            try {
+                val jsonObj = org.json.JSONObject(raw)
+                if (jsonObj.has("detail")) return jsonObj.getString("detail")
+                val keys = jsonObj.keys()
+                if (keys.hasNext()) {
+                    val firstKey = keys.next()
+                    return "$firstKey: ${jsonObj.optString(firstKey)}"
+                }
+            } catch (_: Exception) {
+                return raw.take(200)
+            }
+        }
+        return "Request failed (HTTP ${response.code()})"
+    }
+
+    private suspend fun <T> executeClubRideCall(
+        call: suspend (RydaApiService) -> retrofit2.Response<T>
+    ): Result<T> {
+        return try {
+            val tokenDs = TokenDataStore.getInstance(context)
+            if (!tokenDs.isLoggedIn()) {
+                return Result.failure(IllegalStateException("Please sign in to access Club Rides."))
+            }
+            val api = RetrofitBuilder.getService(tokenDs)
+            val res = call(api)
+            val body = res.body()
+            if (res.isSuccessful && body != null) {
+                Result.success(body)
+            } else {
+                Result.failure(RuntimeException(parseApiError(res)))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(RuntimeException(e.message ?: "Network error. Please check your connection."))
+        }
+    }
+
+    fun getRideByClubSessionId(sessionId: String): Ride? = db.getRideByClubSessionId(sessionId)
+
+    suspend fun computeClubRideRoutes(request: ComputeRouteRequest): Result<ComputeRouteResponse> =
+        executeClubRideCall { it.computeClubRideRoutes(request) }
+
+    suspend fun getClubRides(
+        clubId: String,
+        statusFilter: String? = null,
+        section: String? = null
+    ): Result<List<ClubRideSession>> =
+        executeClubRideCall { it.getClubRides(clubId, statusFilter, section) }
+
+    suspend fun createClubRide(clubId: String, request: CreateClubRideRequest): Result<ClubRideSession> =
+        executeClubRideCall { it.createClubRide(clubId, request) }
+
+    suspend fun getClubRideDetail(clubId: String, sessionId: String): Result<ClubRideSession> =
+        executeClubRideCall { it.getClubRideDetail(clubId, sessionId) }
+
+    suspend fun joinClubRide(clubId: String, sessionId: String): Result<ClubRideJoinResponse> =
+        executeClubRideCall { it.joinClubRide(clubId, sessionId) }
+
+    suspend fun leaveClubRide(clubId: String, sessionId: String): Result<ClubRideJoinResponse> =
+        executeClubRideCall { it.leaveClubRide(clubId, sessionId) }
+
+    suspend fun markClubRideReady(clubId: String, sessionId: String): Result<ClubRideReadyResponse> =
+        executeClubRideCall { it.markClubRideReady(clubId, sessionId) }
+
+    suspend fun getClubRideParticipants(clubId: String, sessionId: String): Result<List<ClubRideParticipant>> =
+        executeClubRideCall { it.getClubRideParticipants(clubId, sessionId) }
+
+    suspend fun verifyClubRideParticipant(clubId: String, sessionId: String, userId: Int): Result<ClubRideVerifyResponse> =
+        executeClubRideCall { it.verifyClubRideParticipant(clubId, sessionId, userId) }
+
+    suspend fun markClubRideParticipantAbsent(clubId: String, sessionId: String, userId: Int): Result<ClubRideAbsentResponse> =
+        executeClubRideCall { it.markClubRideParticipantAbsent(clubId, sessionId, userId) }
+
+    suspend fun startClubRide(clubId: String, sessionId: String): Result<ClubRideStartResponse> =
+        executeClubRideCall { it.startClubRide(clubId, sessionId) }
+
+    suspend fun cancelClubRide(clubId: String, sessionId: String): Result<ClubRideStatusResponse> =
+        executeClubRideCall { it.cancelClubRide(clubId, sessionId) }
+
+    suspend fun completeClubRide(clubId: String, sessionId: String): Result<ClubRideStatusResponse> =
+        executeClubRideCall { it.completeClubRide(clubId, sessionId) }
 
     // ── Phase 7: Achievements & Username Tags ─────────────────────────────────
     fun getRiderTags(): List<RiderTag> {

@@ -25,7 +25,7 @@ class RydaDatabaseHelper private constructor(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "ryda_offline.db"
-        private const val DATABASE_VERSION = 7
+        private const val DATABASE_VERSION = 8
 
         @Volatile
         private var INSTANCE: RydaDatabaseHelper? = null
@@ -110,6 +110,14 @@ class RydaDatabaseHelper private constructor(context: Context) :
                 db.execSQL("CREATE INDEX IF NOT EXISTS idx_sync_outbox_status ON sync_outbox(status);")
             } catch (_: Exception) {}
         }
+        if (oldVersion < 8) {
+            try {
+                db.execSQL("ALTER TABLE clubs ADD COLUMN my_role TEXT;")
+            } catch (_: Exception) {}
+            try {
+                db.execSQL("ALTER TABLE rides ADD COLUMN club_ride_session_id TEXT;")
+            } catch (_: Exception) {}
+        }
     }
 
     private fun createTablesAndSeedData(db: SQLiteDatabase) {
@@ -133,7 +141,8 @@ class RydaDatabaseHelper private constructor(context: Context) :
                     sync_status TEXT NOT NULL,
                     media_sync_status TEXT DEFAULT 'PENDING',
                     is_private INTEGER DEFAULT 1,
-                    photo_uri TEXT
+                    photo_uri TEXT,
+                    club_ride_session_id TEXT
                 )
                 """.trimIndent()
             )
@@ -282,7 +291,8 @@ class RydaDatabaseHelper private constructor(context: Context) :
                     policy TEXT DEFAULT 'OPEN',
                     total_mileage_km REAL DEFAULT 0,
                     members_count INTEGER DEFAULT 1,
-                    is_member INTEGER DEFAULT 0
+                    is_member INTEGER DEFAULT 0,
+                    my_role TEXT
                 )
                 """.trimIndent()
             )
@@ -333,6 +343,7 @@ class RydaDatabaseHelper private constructor(context: Context) :
                 put("media_sync_status", ride.mediaSyncStatus.name)
                 put("is_private", if (ride.isPrivate) 1 else 0)
                 put("photo_uri", ride.photoUri)
+                put("club_ride_session_id", ride.clubRideSessionId)
             }
             db.insertWithOnConflict(
                 "rides",
@@ -360,9 +371,38 @@ class RydaDatabaseHelper private constructor(context: Context) :
                 put("media_sync_status", ride.mediaSyncStatus.name)
                 put("is_private", if (ride.isPrivate) 1 else 0)
                 put("photo_uri", ride.photoUri)
+                put("club_ride_session_id", ride.clubRideSessionId)
             }
             db.update("rides", values, "id = ?", arrayOf(ride.id))
         }
+    }
+
+    private fun cursorToRide(cursor: android.database.Cursor): Ride {
+        val mediaIdx = cursor.getColumnIndex("media_sync_status")
+        val mediaStatusStr = if (mediaIdx != -1) cursor.getString(mediaIdx) else null
+        val mediaStatus = if (!mediaStatusStr.isNullOrBlank()) try { MediaSyncStatus.valueOf(mediaStatusStr) } catch (_: Exception) { MediaSyncStatus.PENDING } else MediaSyncStatus.PENDING
+        val sessionIdx = cursor.getColumnIndex("club_ride_session_id")
+        val sessionId = if (sessionIdx != -1 && !cursor.isNull(sessionIdx)) cursor.getString(sessionIdx) else null
+
+        return Ride(
+            id = cursor.getString(cursor.getColumnIndexOrThrow("id")),
+            motorcycleId = cursor.getString(cursor.getColumnIndexOrThrow("motorcycle_id")),
+            title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
+            status = RideStatus.valueOf(cursor.getString(cursor.getColumnIndexOrThrow("status"))),
+            startTime = cursor.getLong(cursor.getColumnIndexOrThrow("start_time")),
+            endTime = if (cursor.isNull(cursor.getColumnIndexOrThrow("end_time"))) null else cursor.getLong(cursor.getColumnIndexOrThrow("end_time")),
+            totalDistanceMeters = cursor.getDouble(cursor.getColumnIndexOrThrow("total_distance_meters")),
+            movingTimeSeconds = cursor.getLong(cursor.getColumnIndexOrThrow("moving_time_seconds")),
+            elapsedTimeSeconds = cursor.getLong(cursor.getColumnIndexOrThrow("elapsed_time_seconds")),
+            maxSpeedKmh = cursor.getDouble(cursor.getColumnIndexOrThrow("max_speed_kmh")),
+            avgSpeedKmh = cursor.getDouble(cursor.getColumnIndexOrThrow("avg_speed_kmh")),
+            elevationGainMeters = cursor.getDouble(cursor.getColumnIndexOrThrow("elevation_gain_meters")),
+            syncStatus = SyncStatus.valueOf(cursor.getString(cursor.getColumnIndexOrThrow("sync_status"))),
+            mediaSyncStatus = mediaStatus,
+            isPrivate = cursor.getInt(cursor.getColumnIndexOrThrow("is_private")) == 1,
+            photoUri = if (cursor.isNull(cursor.getColumnIndexOrThrow("photo_uri"))) null else cursor.getString(cursor.getColumnIndexOrThrow("photo_uri")),
+            clubRideSessionId = sessionId
+        )
     }
 
     fun getAllCompletedRides(): List<Ride> {
@@ -372,30 +412,7 @@ class RydaDatabaseHelper private constructor(context: Context) :
             null
         ).use { cursor ->
             while (cursor.moveToNext()) {
-                val mediaIdx = cursor.getColumnIndex("media_sync_status")
-                val mediaStatusStr = if (mediaIdx != -1) cursor.getString(mediaIdx) else null
-                val mediaStatus = if (!mediaStatusStr.isNullOrBlank()) try { MediaSyncStatus.valueOf(mediaStatusStr) } catch (_: Exception) { MediaSyncStatus.PENDING } else MediaSyncStatus.PENDING
-
-                list.add(
-                    Ride(
-                        id = cursor.getString(cursor.getColumnIndexOrThrow("id")),
-                        motorcycleId = cursor.getString(cursor.getColumnIndexOrThrow("motorcycle_id")),
-                        title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
-                        status = RideStatus.valueOf(cursor.getString(cursor.getColumnIndexOrThrow("status"))),
-                        startTime = cursor.getLong(cursor.getColumnIndexOrThrow("start_time")),
-                        endTime = if (cursor.isNull(cursor.getColumnIndexOrThrow("end_time"))) null else cursor.getLong(cursor.getColumnIndexOrThrow("end_time")),
-                        totalDistanceMeters = cursor.getDouble(cursor.getColumnIndexOrThrow("total_distance_meters")),
-                        movingTimeSeconds = cursor.getLong(cursor.getColumnIndexOrThrow("moving_time_seconds")),
-                        elapsedTimeSeconds = cursor.getLong(cursor.getColumnIndexOrThrow("elapsed_time_seconds")),
-                        maxSpeedKmh = cursor.getDouble(cursor.getColumnIndexOrThrow("max_speed_kmh")),
-                        avgSpeedKmh = cursor.getDouble(cursor.getColumnIndexOrThrow("avg_speed_kmh")),
-                        elevationGainMeters = cursor.getDouble(cursor.getColumnIndexOrThrow("elevation_gain_meters")),
-                        syncStatus = SyncStatus.valueOf(cursor.getString(cursor.getColumnIndexOrThrow("sync_status"))),
-                        mediaSyncStatus = mediaStatus,
-                        isPrivate = cursor.getInt(cursor.getColumnIndexOrThrow("is_private")) == 1,
-                        photoUri = if (cursor.isNull(cursor.getColumnIndexOrThrow("photo_uri"))) null else cursor.getString(cursor.getColumnIndexOrThrow("photo_uri"))
-                    )
-                )
+                list.add(cursorToRide(cursor))
             }
         }
         return list
@@ -404,28 +421,19 @@ class RydaDatabaseHelper private constructor(context: Context) :
     fun getRideById(rideId: String): Ride? {
         readableDatabase.rawQuery("SELECT * FROM rides WHERE id = ?", arrayOf(rideId)).use { cursor ->
             if (cursor.moveToFirst()) {
-                val mediaIdx = cursor.getColumnIndex("media_sync_status")
-                val mediaStatusStr = if (mediaIdx != -1) cursor.getString(mediaIdx) else null
-                val mediaStatus = if (!mediaStatusStr.isNullOrBlank()) try { MediaSyncStatus.valueOf(mediaStatusStr) } catch (_: Exception) { MediaSyncStatus.PENDING } else MediaSyncStatus.PENDING
+                return cursorToRide(cursor)
+            }
+        }
+        return null
+    }
 
-                return Ride(
-                    id = cursor.getString(cursor.getColumnIndexOrThrow("id")),
-                    motorcycleId = cursor.getString(cursor.getColumnIndexOrThrow("motorcycle_id")),
-                    title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
-                    status = RideStatus.valueOf(cursor.getString(cursor.getColumnIndexOrThrow("status"))),
-                    startTime = cursor.getLong(cursor.getColumnIndexOrThrow("start_time")),
-                    endTime = if (cursor.isNull(cursor.getColumnIndexOrThrow("end_time"))) null else cursor.getLong(cursor.getColumnIndexOrThrow("end_time")),
-                    totalDistanceMeters = cursor.getDouble(cursor.getColumnIndexOrThrow("total_distance_meters")),
-                    movingTimeSeconds = cursor.getLong(cursor.getColumnIndexOrThrow("moving_time_seconds")),
-                    elapsedTimeSeconds = cursor.getLong(cursor.getColumnIndexOrThrow("elapsed_time_seconds")),
-                    maxSpeedKmh = cursor.getDouble(cursor.getColumnIndexOrThrow("max_speed_kmh")),
-                    avgSpeedKmh = cursor.getDouble(cursor.getColumnIndexOrThrow("avg_speed_kmh")),
-                    elevationGainMeters = cursor.getDouble(cursor.getColumnIndexOrThrow("elevation_gain_meters")),
-                    syncStatus = SyncStatus.valueOf(cursor.getString(cursor.getColumnIndexOrThrow("sync_status"))),
-                    mediaSyncStatus = mediaStatus,
-                    isPrivate = cursor.getInt(cursor.getColumnIndexOrThrow("is_private")) == 1,
-                    photoUri = if (cursor.isNull(cursor.getColumnIndexOrThrow("photo_uri"))) null else cursor.getString(cursor.getColumnIndexOrThrow("photo_uri"))
-                )
+    fun getRideByClubSessionId(sessionId: String): Ride? {
+        readableDatabase.rawQuery(
+            "SELECT * FROM rides WHERE club_ride_session_id = ? LIMIT 1",
+            arrayOf(sessionId)
+        ).use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursorToRide(cursor)
             }
         }
         return null
@@ -444,28 +452,7 @@ class RydaDatabaseHelper private constructor(context: Context) :
             null
         ).use { cursor ->
             if (cursor.moveToFirst()) {
-                val mediaIdx = cursor.getColumnIndex("media_sync_status")
-                val mediaStatusStr = if (mediaIdx != -1) cursor.getString(mediaIdx) else null
-                val mediaStatus = if (!mediaStatusStr.isNullOrBlank()) try { MediaSyncStatus.valueOf(mediaStatusStr) } catch (_: Exception) { MediaSyncStatus.PENDING } else MediaSyncStatus.PENDING
-
-                return Ride(
-                    id = cursor.getString(cursor.getColumnIndexOrThrow("id")),
-                    motorcycleId = cursor.getString(cursor.getColumnIndexOrThrow("motorcycle_id")),
-                    title = cursor.getString(cursor.getColumnIndexOrThrow("title")),
-                    status = RideStatus.valueOf(cursor.getString(cursor.getColumnIndexOrThrow("status"))),
-                    startTime = cursor.getLong(cursor.getColumnIndexOrThrow("start_time")),
-                    endTime = if (cursor.isNull(cursor.getColumnIndexOrThrow("end_time"))) null else cursor.getLong(cursor.getColumnIndexOrThrow("end_time")),
-                    totalDistanceMeters = cursor.getDouble(cursor.getColumnIndexOrThrow("total_distance_meters")),
-                    movingTimeSeconds = cursor.getLong(cursor.getColumnIndexOrThrow("moving_time_seconds")),
-                    elapsedTimeSeconds = cursor.getLong(cursor.getColumnIndexOrThrow("elapsed_time_seconds")),
-                    maxSpeedKmh = cursor.getDouble(cursor.getColumnIndexOrThrow("max_speed_kmh")),
-                    avgSpeedKmh = cursor.getDouble(cursor.getColumnIndexOrThrow("avg_speed_kmh")),
-                    elevationGainMeters = cursor.getDouble(cursor.getColumnIndexOrThrow("elevation_gain_meters")),
-                    syncStatus = SyncStatus.valueOf(cursor.getString(cursor.getColumnIndexOrThrow("sync_status"))),
-                    mediaSyncStatus = mediaStatus,
-                    isPrivate = cursor.getInt(cursor.getColumnIndexOrThrow("is_private")) == 1,
-                    photoUri = if (cursor.isNull(cursor.getColumnIndexOrThrow("photo_uri"))) null else cursor.getString(cursor.getColumnIndexOrThrow("photo_uri"))
-                )
+                return cursorToRide(cursor)
             }
         }
         return null
@@ -1064,6 +1051,8 @@ class RydaDatabaseHelper private constructor(context: Context) :
             }
             readableDatabase.rawQuery(query, null).use { cursor ->
                 while (cursor.moveToNext()) {
+                    val myRoleIdx = cursor.getColumnIndex("my_role")
+                    val myRoleVal = if (myRoleIdx != -1 && !cursor.isNull(myRoleIdx)) cursor.getString(myRoleIdx) else null
                     list.add(
                         Club(
                             id = cursor.getString(cursor.getColumnIndexOrThrow("id")),
@@ -1077,7 +1066,8 @@ class RydaDatabaseHelper private constructor(context: Context) :
                             policy = cursor.getString(cursor.getColumnIndexOrThrow("policy")),
                             totalMileageKm = cursor.getDouble(cursor.getColumnIndexOrThrow("total_mileage_km")),
                             membersCount = cursor.getInt(cursor.getColumnIndexOrThrow("members_count")),
-                            isMember = cursor.getInt(cursor.getColumnIndexOrThrow("is_member")) == 1
+                            isMember = cursor.getInt(cursor.getColumnIndexOrThrow("is_member")) == 1,
+                            myRole = myRoleVal
                         )
                     )
                 }
@@ -1101,6 +1091,7 @@ class RydaDatabaseHelper private constructor(context: Context) :
                 put("total_mileage_km", club.totalMileageKm)
                 put("members_count", club.membersCount)
                 put("is_member", if (club.isMember) 1 else 0)
+                put("my_role", club.myRole)
             }
             db.insertWithOnConflict("clubs", null, values, SQLiteDatabase.CONFLICT_REPLACE)
         }

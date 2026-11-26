@@ -1,12 +1,7 @@
 package com.ryda.app.ui.screens
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -22,18 +17,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.maps.android.compose.*
 import com.ryda.app.core.models.GpsPoint
 import com.ryda.app.core.models.Motorcycle
 import com.ryda.app.core.models.Ride
@@ -43,6 +41,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private const val RYDA_DARK_MAP_STYLE_NO_LABELS = """
+[
+  { "elementType": "geometry", "stylers": [{"color": "#181b20"}] },
+  { "elementType": "labels", "stylers": [{"visibility": "off"}] },
+  { "elementType": "labels.icon", "stylers": [{"visibility": "off"}] },
+  { "elementType": "labels.text", "stylers": [{"visibility": "off"}] },
+  { "featureType": "administrative", "elementType": "geometry", "stylers": [{"color": "#282d37"}] },
+  { "featureType": "poi.park", "elementType": "geometry", "stylers": [{"color": "#13231a"}] },
+  { "featureType": "road", "elementType": "geometry.fill", "stylers": [{"color": "#2c323f"}] },
+  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{"color": "#181b20"}] },
+  { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [{"color": "#3f4759"}] },
+  { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{"color": "#21262d"}] },
+  { "featureType": "transit", "elementType": "geometry", "stylers": [{"color": "#24292f"}] },
+  { "featureType": "water", "elementType": "geometry", "stylers": [{"color": "#0d1b2a"}] }
+]
+"""
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,15 +71,71 @@ fun RideShareStudioScreen(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
-    var config by remember { mutableStateOf(ShareConfig()) }
-    var selectedPhotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    val initialStartName = remember(ride) {
+        if (ride.title.isNotBlank() && !ride.title.contains("Ride", ignoreCase = true)) {
+            ride.title
+        } else ""
+    }
+
+    var config by remember {
+        mutableStateOf(
+            ShareConfig(
+                startLocationName = initialStartName
+            )
+        )
+    }
+
+    var startLocationText by remember { mutableStateOf(config.startLocationName) }
+    var destLocationText by remember { mutableStateOf(config.destinationName) }
+
+    var mapSnapshotBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isExporting by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
     var showShareSheet by remember { mutableStateOf(false) }
     var exportedUri by remember { mutableStateOf<Uri?>(null) }
-    var showStatsOptions by remember { mutableStateOf(false) }
 
-    // Auto-dismiss export message after 3 seconds
+    // Accent color used inside the image graphic
+    val graphicAccentColor = remember(config.colorTheme) {
+        Color(android.graphics.Color.parseColor(config.colorTheme.primaryHex))
+    }
+
+    // Accent color used for UI buttons outside the image container (stays visible when PLAIN_BLACK is selected)
+    val uiAccentColor = remember(config.colorTheme) {
+        if (config.colorTheme == ColorTheme.PLAIN_BLACK) {
+            SafetyAmber
+        } else {
+            Color(android.graphics.Color.parseColor(config.colorTheme.primaryHex))
+        }
+    }
+
+    val latLngList = remember(points) { points.map { LatLng(it.latitude, it.longitude) } }
+
+    val currentTemplate = remember(config.style, config.template) {
+        if (config.style == GraphicStyle.MAP_BACKGROUND) SvgLayoutTemplate.HERO_DISTANCE else config.template
+    }
+    val imageAspectRatio = remember(currentTemplate) {
+        currentTemplate.viewBoxWidth.toFloat() / currentTemplate.viewBoxHeight.toFloat()
+    }
+
+    LaunchedEffect(config.style) {
+        if (config.style == GraphicStyle.MAP_BACKGROUND) {
+            mapSnapshotBitmap = null
+        }
+    }
+
+    val liveBitmap = remember(ride, points, config, startLocationText, destLocationText, mapSnapshotBitmap) {
+        val finalConfig = config.copy(
+            startLocationName = startLocationText,
+            destinationName = destLocationText
+        )
+        RideShareRenderer.renderShareGraphic(
+            ride = ride,
+            points = points,
+            config = finalConfig,
+            mapBitmap = mapSnapshotBitmap
+        )
+    }
+
     LaunchedEffect(exportMessage) {
         if (exportMessage != null) {
             delay(3000)
@@ -72,90 +143,28 @@ fun RideShareStudioScreen(
         }
     }
 
-    // Photo picker launcher (single modern picker with fallback)
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        uri?.let {
-            scope.launch {
-                val bmp = withContext(Dispatchers.IO) {
-                    try {
-                        context.contentResolver.openInputStream(it)?.use { stream ->
-                            BitmapFactory.decodeStream(stream)
-                        }
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-                if (bmp != null) {
-                    selectedPhotoBitmap = bmp
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
-            }
-        }
-    }
-
-    val legacyPhotoLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            scope.launch {
-                val bmp = withContext(Dispatchers.IO) {
-                    try {
-                        context.contentResolver.openInputStream(it)?.use { stream ->
-                            BitmapFactory.decodeStream(stream)
-                        }
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-                if (bmp != null) {
-                    selectedPhotoBitmap = bmp
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
-            }
-        }
-    }
-
-    fun pickPhoto() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            photoPickerLauncher.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-            )
-        } else {
-            legacyPhotoLauncher.launch("image/*")
-        }
-    }
-
     fun doExport(saveToGallery: Boolean) {
         scope.launch {
             isExporting = true
             try {
+                val finalConfig = config.copy(
+                    startLocationName = startLocationText,
+                    destinationName = destLocationText
+                )
                 val bitmap = withContext(Dispatchers.Default) {
-                    when (config.format) {
-                        ShareFormat.TRANSPARENT_STICKER ->
-                            RideShareRenderer.renderTransparentSticker(ride, points, motorcycle, config)
-                        ShareFormat.MAP_CARD ->
-                            RideShareRenderer.renderMapCard(ride, points, motorcycle, config)
-                        ShareFormat.PHOTO_CARD -> {
-                            val photo = selectedPhotoBitmap
-                            if (photo != null) {
-                                RideShareRenderer.renderPhotoCard(ride, points, motorcycle, photo, config)
-                            } else {
-                                RideShareRenderer.renderMapCard(ride, points, motorcycle, config.copy(format = ShareFormat.MAP_CARD))
-                            }
-                        }
-                    }
+                    RideShareRenderer.renderShareGraphic(
+                        ride = ride,
+                        points = points,
+                        config = finalConfig,
+                        mapBitmap = mapSnapshotBitmap
+                    )
                 }
 
-                val isTransparent = config.format == ShareFormat.TRANSPARENT_STICKER
-                val ext = if (isTransparent) "png" else "jpg"
-                val filename = "ryda_ride_${ride.id.take(8)}_${System.currentTimeMillis()}.$ext"
-
+                val filename = "ryda_${finalConfig.template.name.lowercase()}_${ride.id.take(8)}_${System.currentTimeMillis()}.png"
                 val uri = if (saveToGallery) {
-                    ShareHelper.saveBitmapToGallery(context, bitmap, filename, isTransparent)
+                    ShareHelper.saveBitmapToGallery(context, bitmap, filename, isTransparent = false)
                 } else {
-                    ShareHelper.saveBitmapToCache(context, bitmap, filename, isTransparent)
+                    ShareHelper.saveBitmapToCache(context, bitmap, filename, isTransparent = false)
                 }
 
                 if (uri != null) {
@@ -167,7 +176,7 @@ fun RideShareStudioScreen(
                         showShareSheet = true
                     }
                 } else {
-                    exportMessage = "Export failed. Please check permissions."
+                    exportMessage = "Export failed. Check storage permissions."
                 }
             } catch (e: Exception) {
                 exportMessage = "Export error: ${e.message}"
@@ -207,47 +216,9 @@ fun RideShareStudioScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
-
-                // Format tabs: Sticker | Map Card | Photo Card
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FormatTabChip(
-                        label = "Transparent Sticker",
-                        selected = config.format == ShareFormat.TRANSPARENT_STICKER,
-                        onClick = {
-                            config = config.copy(format = ShareFormat.TRANSPARENT_STICKER)
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    FormatTabChip(
-                        label = "Map Card",
-                        selected = config.format == ShareFormat.MAP_CARD,
-                        onClick = {
-                            config = config.copy(format = ShareFormat.MAP_CARD)
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    FormatTabChip(
-                        label = "Photo Card",
-                        selected = config.format == ShareFormat.PHOTO_CARD,
-                        onClick = {
-                            config = config.copy(format = ShareFormat.PHOTO_CARD)
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
             }
         },
         bottomBar = {
-            // Action bar: Save to Gallery & Share
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -265,13 +236,13 @@ fun RideShareStudioScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         CircularProgressIndicator(
-                            color = MotoOrange,
+                            color = uiAccentColor,
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 2.5.dp
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Rendering high-res ride image...",
+                            text = "Rendering high-res graphic...",
                             color = TextSecondary,
                             fontSize = 14.sp
                         )
@@ -287,8 +258,8 @@ fun RideShareStudioScreen(
                                 .weight(1f)
                                 .height(48.dp),
                             shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, ElectricCyan),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ElectricCyan)
+                            border = BorderStroke(1.dp, uiAccentColor),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = uiAccentColor)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SaveAlt,
@@ -306,7 +277,7 @@ fun RideShareStudioScreen(
                                 .height(48.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MotoOrange,
+                                containerColor = uiAccentColor,
                                 contentColor = AsphaltBlack
                             )
                         ) {
@@ -329,260 +300,302 @@ fun RideShareStudioScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Photo picker button if in Photo Card format
-            if (config.format == ShareFormat.PHOTO_CARD) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (selectedPhotoBitmap != null) "Ride photo selected" else "Choose a ride photo",
-                        color = TextSecondary,
-                        fontSize = 13.sp
-                    )
-                    OutlinedButton(
-                        onClick = { pickPhoto() },
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, MotoOrange),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MotoOrange),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AddPhotoAlternate,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (selectedPhotoBitmap != null) "Change Photo" else "Pick Photo", fontSize = 12.sp)
-                    }
+            // Live Preview Container (Dynamically sized to match the image aspect ratio)
+            val liveBgColor = remember(config.colorTheme, config.style) {
+                if (config.style == GraphicStyle.TRANSPARENT_SVG) {
+                    Color(android.graphics.Color.parseColor(config.colorTheme.bgHex))
+                } else {
+                    Color(0xFF12141A)
                 }
             }
-
-            // Live Canvas Preview
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-                    .height(300.dp)
+                    .padding(horizontal = 24.dp, vertical = 10.dp)
+                    .aspectRatio(imageAspectRatio)
+                    .heightIn(max = 380.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .border(1.5.dp, BorderSubtle, RoundedCornerShape(16.dp))
+                    .background(liveBgColor)
+                    .border(1.5.dp, BorderSubtle, RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
             ) {
-                LiveStudioPreview(
-                    ride = ride,
-                    points = points,
-                    motorcycle = motorcycle,
-                    config = config,
-                    photoBitmap = selectedPhotoBitmap,
-                    onPickPhoto = { pickPhoto() },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            // Format-specific templates
-            Text(
-                text = when (config.format) {
-                    ShareFormat.TRANSPARENT_STICKER -> "STICKER LAYOUT"
-                    ShareFormat.MAP_CARD -> "MAP STYLE"
-                    ShareFormat.PHOTO_CARD -> "OVERLAY TEXT CONTRAST"
-                },
-                color = TextSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
-            )
-
-            when (config.format) {
-                ShareFormat.TRANSPARENT_STICKER -> {
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item {
-                            TemplateThumbCard(
-                                label = "Compact Corner",
-                                selected = config.layout == StickerLayout.COMPACT_CORNER,
-                                onClick = {
-                                    config = config.copy(layout = StickerLayout.COMPACT_CORNER)
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            )
-                        }
-                        item {
-                            TemplateThumbCard(
-                                label = "Full Vertical",
-                                selected = config.layout == StickerLayout.FULL_VERTICAL,
-                                onClick = {
-                                    config = config.copy(layout = StickerLayout.FULL_VERTICAL)
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            )
-                        }
-                        item {
-                            TemplateThumbCard(
-                                label = "Horizontal Strip",
-                                selected = config.layout == StickerLayout.HORIZONTAL_STRIP,
-                                onClick = {
-                                    config = config.copy(layout = StickerLayout.HORIZONTAL_STRIP)
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            )
+                if (config.style == GraphicStyle.MAP_BACKGROUND && latLngList.size >= 2) {
+                    val cameraPositionState = rememberCameraPositionState()
+                    LaunchedEffect(latLngList) {
+                        if (latLngList.isNotEmpty()) {
+                            try {
+                                val builder = LatLngBounds.builder()
+                                latLngList.forEach { builder.include(it) }
+                                cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(builder.build(), 40))
+                            } catch (_: Exception) {}
                         }
                     }
 
-                    // Text contrast option for sticker (light on dark vs dark on light)
-                    Row(
+                    // Live Interactive GoogleMap with Plain Roads
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        properties = MapProperties(
+                            mapStyleOptions = MapStyleOptions(RYDA_DARK_MAP_STYLE_NO_LABELS)
+                        ),
+                        uiSettings = MapUiSettings(
+                            zoomControlsEnabled = false,
+                            compassEnabled = false,
+                            mapToolbarEnabled = false,
+                            myLocationButtonEnabled = false,
+                            rotationGesturesEnabled = false,
+                            scrollGesturesEnabled = false,
+                            zoomGesturesEnabled = false
+                        )
+                    ) {
+                        Polyline(
+                            points = latLngList,
+                            color = graphicAccentColor,
+                            width = 6f
+                        )
+                        if (latLngList.isNotEmpty()) {
+                            val startMarkerState = remember(latLngList) { MarkerState(position = latLngList.first()) }
+                            val finishMarkerState = remember(latLngList) { MarkerState(position = latLngList.last()) }
+                            val finishHue = when (config.colorTheme) {
+                                ColorTheme.RYDA_ORANGE -> BitmapDescriptorFactory.HUE_ORANGE
+                                ColorTheme.RYDA_CYAN -> BitmapDescriptorFactory.HUE_CYAN
+                                ColorTheme.FOREST_GREEN -> BitmapDescriptorFactory.HUE_GREEN
+                                ColorTheme.HIGH_VIS_LIME -> BitmapDescriptorFactory.HUE_YELLOW
+                                ColorTheme.PLAIN_WHITE -> BitmapDescriptorFactory.HUE_AZURE
+                                ColorTheme.PLAIN_BLACK -> BitmapDescriptorFactory.HUE_VIOLET
+                            }
+                            Marker(
+                                state = startMarkerState,
+                                title = "Start",
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+                            )
+                            Marker(
+                                state = finishMarkerState,
+                                title = "Finish",
+                                icon = BitmapDescriptorFactory.defaultMarker(finishHue)
+                            )
+                        }
+
+                        MapEffect(config.style, config.colorTheme) { googleMap ->
+                            try {
+                                googleMap.snapshot { bmp ->
+                                    mapSnapshotBitmap = bmp
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+
+                    // Watermark Top Right
+                    Text(
+                        text = "RYDA",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Black,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("Sticker text tone:", color = TextSecondary, fontSize = 12.sp)
-                        FilterChip(
-                            selected = config.textStyle == TextStyle.LIGHT_ON_DARK,
-                            onClick = { config = config.copy(textStyle = TextStyle.LIGHT_ON_DARK) },
-                            label = { Text("White (for dark photos)", fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MotoOrange,
-                                selectedLabelColor = AsphaltBlack
-                            )
-                        )
-                        FilterChip(
-                            selected = config.textStyle == TextStyle.DARK_ON_LIGHT,
-                            onClick = { config = config.copy(textStyle = TextStyle.DARK_ON_LIGHT) },
-                            label = { Text("Dark", fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MotoOrange,
-                                selectedLabelColor = AsphaltBlack
-                            )
-                        )
-                    }
-                }
+                            .align(Alignment.TopEnd)
+                            .padding(top = 12.dp, end = 14.dp)
+                    )
 
-                ShareFormat.MAP_CARD -> {
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item {
-                            TemplateThumbCard(
-                                label = "RYDA Branded",
-                                selected = config.mapCardStyle == MapCardStyle.RYDA_BRANDED,
-                                onClick = {
-                                    config = config.copy(mapCardStyle = MapCardStyle.RYDA_BRANDED)
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            )
-                        }
-                        item {
-                            TemplateThumbCard(
-                                label = "Dark Map",
-                                selected = config.mapCardStyle == MapCardStyle.DARK,
-                                onClick = {
-                                    config = config.copy(mapCardStyle = MapCardStyle.DARK)
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            )
-                        }
-                        item {
-                            TemplateThumbCard(
-                                label = "Light Map",
-                                selected = config.mapCardStyle == MapCardStyle.LIGHT,
-                                onClick = {
-                                    config = config.copy(mapCardStyle = MapCardStyle.LIGHT)
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            )
-                        }
-                        item {
-                            TemplateThumbCard(
-                                label = "Minimal Route",
-                                selected = config.mapCardStyle == MapCardStyle.MINIMAL_ROUTE,
-                                onClick = {
-                                    config = config.copy(mapCardStyle = MapCardStyle.MINIMAL_ROUTE)
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            )
-                        }
+                    // Hero Distance Text Stats Overlay for Map Style
+                    val startName = startLocationText.trim()
+                    val destName = destLocationText.trim()
+                    val headerText = when {
+                        startName.isNotBlank() && destName.isNotBlank() -> "$startName ➔ $destName"
+                        startName.isNotBlank() -> startName
+                        destName.isNotBlank() -> destName
+                        ride.title.isNotBlank() && !ride.title.contains("Ride", ignoreCase = true) -> ride.title
+                        else -> "Recorded Ride"
                     }
-                }
 
-                ShareFormat.PHOTO_CARD -> {
-                    Row(
+                    val distStr = String.format(java.util.Locale.US, "%.1f", ride.totalDistanceKm)
+                    val timeStr = ride.formattedDuration(ride.movingTimeSeconds)
+                    val avgSpdVal = if (ride.avgSpeedKmh > 0) ride.avgSpeedKmh else if (ride.movingTimeSeconds > 0) (ride.totalDistanceMeters / ride.movingTimeSeconds) * 3.6 else 0.0
+                    val avgStr = String.format(java.util.Locale.US, "%.1f", avgSpdVal)
+                    val maxSpdVal = if (ride.maxSpeedKmh > 0) ride.maxSpeedKmh else points.maxOfOrNull { it.speedKmh } ?: 0.0
+                    val topStr = String.format(java.util.Locale.US, "%.1f", maxSpdVal)
+
+                    val mapSecondaryColor = Color(android.graphics.Color.parseColor(config.colorTheme.secondaryHex))
+
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .fillMaxSize()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        FilterChip(
-                            selected = config.textStyle == TextStyle.LIGHT_ON_DARK,
-                            onClick = { config = config.copy(textStyle = TextStyle.LIGHT_ON_DARK) },
-                            label = { Text("Light Text", fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MotoOrange,
-                                selectedLabelColor = AsphaltBlack
+                        Column {
+                            Text(
+                                text = headerText,
+                                color = mapSecondaryColor,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
                             )
-                        )
-                        FilterChip(
-                            selected = config.textStyle == TextStyle.DARK_ON_LIGHT,
-                            onClick = { config = config.copy(textStyle = TextStyle.DARK_ON_LIGHT) },
-                            label = { Text("Dark Text", fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MotoOrange,
-                                selectedLabelColor = AsphaltBlack
-                            )
-                        )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(
+                                    text = distStr,
+                                    color = graphicAccentColor,
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "KM",
+                                    color = graphicAccentColor,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            Column {
+                                Text("TIME", color = graphicAccentColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(timeStr, color = graphicAccentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Column {
+                                Text("AVG", color = graphicAccentColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(avgStr, color = graphicAccentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Column {
+                                Text("TOP", color = graphicAccentColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(topStr, color = graphicAccentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
+                } else {
+                    // TRANSPARENT SVG STYLE: Render liveBitmap
+                    Image(
+                        bitmap = liveBitmap.asImageBitmap(),
+                        contentDescription = "Ride Graphic Preview",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Aspect Ratio / Export Size
-            Text(
-                text = "EXPORT SIZE",
-                color = TextSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
-            )
+            // --- 1. GRAPHIC STYLE SELECTION (Transparent SVG vs Map Route) ---
+            SectionHeader("GRAPHIC STYLE")
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ExportSizeChip(
-                    label = "Story 9:16",
-                    sub = "1080×1920",
-                    selected = config.exportSize == ExportSize.STORY,
-                    onClick = { config = config.copy(exportSize = ExportSize.STORY) },
+                OptionChip(
+                    label = "1 - Transparent (SVG)",
+                    selected = config.style == GraphicStyle.TRANSPARENT_SVG,
+                    accentColor = uiAccentColor,
+                    onClick = {
+                        config = config.copy(style = GraphicStyle.TRANSPARENT_SVG)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    },
                     modifier = Modifier.weight(1f)
                 )
-                ExportSizeChip(
-                    label = "Feed 4:5",
-                    sub = "1080×1350",
-                    selected = config.exportSize == ExportSize.FEED_PORTRAIT,
-                    onClick = { config = config.copy(exportSize = ExportSize.FEED_PORTRAIT) },
+                OptionChip(
+                    label = "2 - Map (Plain Roads)",
+                    selected = config.style == GraphicStyle.MAP_BACKGROUND,
+                    accentColor = uiAccentColor,
+                    onClick = {
+                        config = config.copy(style = GraphicStyle.MAP_BACKGROUND)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    },
                     modifier = Modifier.weight(1f)
                 )
-                ExportSizeChip(
-                    label = "Square 1:1",
-                    sub = "1080×1080",
-                    selected = config.exportSize == ExportSize.SQUARE,
-                    onClick = { config = config.copy(exportSize = ExportSize.SQUARE) },
-                    modifier = Modifier.weight(1f)
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // --- 2. SVG LAYOUT SELECTION (Only shown for Transparent SVG) ---
+            if (config.style == GraphicStyle.TRANSPARENT_SVG) {
+                SectionHeader("SVG LAYOUT TEMPLATE")
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(SvgLayoutTemplate.entries.toTypedArray()) { tmpl ->
+                        OptionChip(
+                            label = tmpl.title,
+                            selected = config.template == tmpl,
+                            accentColor = uiAccentColor,
+                            onClick = {
+                                config = config.copy(template = tmpl)
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            // --- 3. BRAND COLOR THEME (6 Color Swatches) ---
+            SectionHeader("BRAND COLOR THEME")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ColorCircleSwatch(
+                    color = Color(0xFFFF6B35),
+                    selected = config.colorTheme == ColorTheme.RYDA_ORANGE,
+                    onClick = {
+                        config = config.copy(colorTheme = ColorTheme.RYDA_ORANGE)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                )
+                ColorCircleSwatch(
+                    color = Color(0xFF00E5FF),
+                    selected = config.colorTheme == ColorTheme.RYDA_CYAN,
+                    onClick = {
+                        config = config.copy(colorTheme = ColorTheme.RYDA_CYAN)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                )
+                ColorCircleSwatch(
+                    color = Color(0xFF10B981),
+                    selected = config.colorTheme == ColorTheme.FOREST_GREEN,
+                    onClick = {
+                        config = config.copy(colorTheme = ColorTheme.FOREST_GREEN)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                )
+                ColorCircleSwatch(
+                    color = Color(0xFFCCFF00),
+                    selected = config.colorTheme == ColorTheme.HIGH_VIS_LIME,
+                    onClick = {
+                        config = config.copy(colorTheme = ColorTheme.HIGH_VIS_LIME)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                )
+                ColorCircleSwatch(
+                    color = Color.White,
+                    selected = config.colorTheme == ColorTheme.PLAIN_WHITE,
+                    onClick = {
+                        config = config.copy(colorTheme = ColorTheme.PLAIN_WHITE)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                )
+                ColorCircleSwatch(
+                    color = Color(0xFF101114),
+                    selected = config.colorTheme == ColorTheme.PLAIN_BLACK,
+                    onClick = {
+                        config = config.copy(colorTheme = ColorTheme.PLAIN_BLACK)
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Stats Toggles Section (Collapsible)
+            // --- 4. START AND DESTINATION LOCATION CUSTOMIZATION ---
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -591,82 +604,39 @@ fun RideShareStudioScreen(
                 colors = CardDefaults.cardColors(containerColor = CarbonDark),
                 border = BorderStroke(1.dp, BorderSubtle)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showStatsOptions = !showStatsOptions },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Tune,
-                                contentDescription = null,
-                                tint = MotoOrange,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Stats & Privacy Options",
-                                color = TextPrimary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Icon(
-                            imageVector = if (showStatsOptions) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = null,
-                            tint = TextSecondary
-                        )
-                    }
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "Start & Destination Names (Optional)",
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    AnimatedVisibility(visible = showStatsOptions) {
-                        Column(modifier = Modifier.padding(top = 12.dp)) {
-                            StatToggleRow("Distance", config.showDistance) { config = config.copy(showDistance = it) }
-                            StatToggleRow("Moving Time", config.showMovingTime) { config = config.copy(showMovingTime = it) }
-                            StatToggleRow("Average Speed", config.showAvgSpeed) { config = config.copy(showAvgSpeed = it) }
-                            StatToggleRow("Max Speed", config.showMaxSpeed) { config = config.copy(showMaxSpeed = it) }
-                            StatToggleRow("Elevation Gain", config.showElevation) { config = config.copy(showElevation = it) }
-                            StatToggleRow("Motorcycle Model", config.showMotorcycle) { config = config.copy(showMotorcycle = it) }
-                            StatToggleRow("Ride Date", config.showDate) { config = config.copy(showDate = it) }
+                    OutlinedTextField(
+                        value = startLocationText,
+                        onValueChange = { startLocationText = it },
+                        label = { Text("Starting Location (e.g., Bandra Bandstand)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                            Divider(
-                                color = BorderSubtle,
-                                thickness = 1.dp,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                            // Privacy toggle
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Trim Route Ends (Privacy)", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("Hides the first & last ~200m of your route so home or work locations remain private.", color = TextSecondary, fontSize = 11.sp)
-                                }
-                                Switch(
-                                    checked = config.trimRouteEnds,
-                                    onCheckedChange = { config = config.copy(trimRouteEnds = it) },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = MotoOrange,
-                                        checkedTrackColor = MotoOrange.copy(alpha = 0.5f)
-                                    )
-                                )
-                            }
-                        }
-                    }
+                    OutlinedTextField(
+                        value = destLocationText,
+                        onValueChange = { destLocationText = it },
+                        label = { Text("Destination (e.g., Worli Sea Face)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // Floating export message snackbar
+        // Floating status toast
         if (exportMessage != null) {
             Box(
                 modifier = Modifier
@@ -677,7 +647,7 @@ fun RideShareStudioScreen(
                 Card(
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = CarbonDark),
-                    border = BorderStroke(1.dp, MotoOrange)
+                    border = BorderStroke(1.dp, uiAccentColor)
                 ) {
                     Text(
                         text = exportMessage!!,
@@ -691,7 +661,7 @@ fun RideShareStudioScreen(
         }
     }
 
-    // Share Options Bottom Sheet
+    // Native Share Sheet Modal
     if (showShareSheet && exportedUri != null) {
         val uri = exportedUri!!
         ModalBottomSheet(
@@ -716,10 +686,9 @@ fun RideShareStudioScreen(
                 if (ShareHelper.hasInstagramInstalled(context)) {
                     ShareTargetRow(
                         title = "Instagram Stories",
-                        subtitle = if (config.format == ShareFormat.TRANSPARENT_STICKER)
-                            "Opens directly as sticker overlay in Instagram Stories"
-                        else "Shares graphic directly to Instagram Stories",
+                        subtitle = "Shares graphic directly to Instagram Stories",
                         icon = Icons.Default.CameraAlt,
+                        accentColor = uiAccentColor,
                         onClick = {
                             showShareSheet = false
                             ShareHelper.shareToInstagramStory(context, uri)
@@ -728,32 +697,35 @@ fun RideShareStudioScreen(
                 }
 
                 ShareTargetRow(
-                    title = "Instagram Feed / Post",
+                    title = "Instagram Feed / Direct",
                     subtitle = "Share image to Instagram Feed or Direct Message",
                     icon = Icons.Default.PhotoLibrary,
+                    accentColor = uiAccentColor,
                     onClick = {
                         showShareSheet = false
-                        ShareHelper.shareImage(context, uri, if (config.format == ShareFormat.TRANSPARENT_STICKER) "image/png" else "image/jpeg")
+                        ShareHelper.shareImage(context, uri, "image/png")
                     }
                 )
 
                 ShareTargetRow(
                     title = "WhatsApp",
-                    subtitle = "Share with your riding group or status",
+                    subtitle = "Share with riding groups or status",
                     icon = Icons.Default.Chat,
+                    accentColor = uiAccentColor,
                     onClick = {
                         showShareSheet = false
-                        ShareHelper.shareImage(context, uri, if (config.format == ShareFormat.TRANSPARENT_STICKER) "image/png" else "image/jpeg")
+                        ShareHelper.shareImage(context, uri, "image/png")
                     }
                 )
 
                 ShareTargetRow(
                     title = "More Apps...",
-                    subtitle = "Open Android system share sheet",
+                    subtitle = "Open system share chooser",
                     icon = Icons.Default.Share,
+                    accentColor = uiAccentColor,
                     onClick = {
                         showShareSheet = false
-                        ShareHelper.shareImage(context, uri, if (config.format == ShareFormat.TRANSPARENT_STICKER) "image/png" else "image/jpeg")
+                        ShareHelper.shareImage(context, uri, "image/png")
                     }
                 )
 
@@ -764,385 +736,66 @@ fun RideShareStudioScreen(
 }
 
 @Composable
-private fun LiveStudioPreview(
-    ride: Ride,
-    points: List<GpsPoint>,
-    motorcycle: Motorcycle?,
-    config: ShareConfig,
-    photoBitmap: Bitmap?,
-    onPickPhoto: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val preparedPoints = remember(points, config.trimRouteEnds) {
-        val pts = if (config.trimRouteEnds && points.size > 10) {
-            RouteSimplifier.trimRouteEnds(points, config.trimMeters)
-        } else points
-        RouteSimplifier.simplifyRoute(pts, 0.0002)
-    }
-
-    Box(modifier = modifier) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-
-            when (config.format) {
-                ShareFormat.TRANSPARENT_STICKER -> {
-                    // Draw checkerboard background to emphasize transparency
-                    val squareSize = 24f
-                    var y = 0f
-                    var row = 0
-                    while (y < h) {
-                        var x = 0f
-                        var col = 0
-                        while (x < w) {
-                            val color = if ((row + col) % 2 == 0) Color(0xFF1E1E24) else Color(0xFF141418)
-                            drawRect(color, Offset(x, y), Size(squareSize, squareSize))
-                            x += squareSize
-                            col++
-                        }
-                        y += squareSize
-                        row++
-                    }
-
-                    // Route polyline in white/dark
-                    if (preparedPoints.size >= 2) {
-                        val box = RouteSimplifier.computeBoundingBox(preparedPoints)
-                        val routeH = when (config.layout) {
-                            StickerLayout.COMPACT_CORNER, StickerLayout.HORIZONTAL_STRIP -> h * 0.62f
-                            StickerLayout.FULL_VERTICAL -> h * 0.88f
-                        }
-                        val offsets = RouteSimplifier.projectToCanvas(preparedPoints, box, w, routeH, w * 0.1f)
-                        val routeColor = if (config.textStyle == TextStyle.LIGHT_ON_DARK) Color.White else Color(0xFF101114)
-                        drawRoutePolyline(this, offsets, routeColor, 4.5f)
-                    }
-                }
-
-                ShareFormat.MAP_CARD -> {
-                    // Background
-                    val bgColor = when (config.mapCardStyle) {
-                        MapCardStyle.DARK -> Color(0xFF101114)
-                        MapCardStyle.LIGHT -> Color(0xFFF2F2F7)
-                        MapCardStyle.MINIMAL_ROUTE -> Color(0xFF0A0A0A)
-                        MapCardStyle.RYDA_BRANDED -> Color(0xFF141424)
-                    }
-                    drawRect(bgColor)
-
-                    // Subtle grid
-                    if (config.mapCardStyle != MapCardStyle.MINIMAL_ROUTE) {
-                        val gridColor = if (config.mapCardStyle == MapCardStyle.LIGHT) Color(0xFFDCDCE5) else Color(0xFF22222E)
-                        var gx = 0f
-                        while (gx < w) {
-                            drawLine(gridColor, Offset(gx, 0f), Offset(gx, h), strokeWidth = 1f)
-                            gx += 40f
-                        }
-                        var gy = 0f
-                        while (gy < h) {
-                            drawLine(gridColor, Offset(0f, gy), Offset(w, gy), strokeWidth = 1f)
-                            gy += 40f
-                        }
-                    }
-
-                    // Route
-                    if (preparedPoints.size >= 2) {
-                        val box = RouteSimplifier.computeBoundingBox(preparedPoints)
-                        val offsets = RouteSimplifier.projectToCanvas(preparedPoints, box, w, h * 0.7f, w * 0.12f)
-                        val routeColor = when (config.mapCardStyle) {
-                            MapCardStyle.DARK, MapCardStyle.RYDA_BRANDED -> MotoOrange
-                            MapCardStyle.LIGHT -> Color(0xFF101114)
-                            MapCardStyle.MINIMAL_ROUTE -> Color.White
-                        }
-                        if (config.mapCardStyle == MapCardStyle.RYDA_BRANDED) {
-                            drawRoutePolyline(this, offsets, MotoOrange.copy(alpha = 0.35f), 10f)
-                        }
-                        drawRoutePolyline(this, offsets, routeColor, 4.5f)
-
-                        // Start / Finish markers
-                        if (offsets.isNotEmpty()) {
-                            drawCircle(Color(0xFF4CAF50), radius = 7f, center = offsets.first())
-                            drawCircle(Color.White, radius = 7f, center = offsets.first(), style = Stroke(2f))
-                            drawCircle(MotoOrange, radius = 7f, center = offsets.last())
-                            drawCircle(Color.White, radius = 7f, center = offsets.last(), style = Stroke(2f))
-                        }
-                    }
-                }
-
-                ShareFormat.PHOTO_CARD -> {
-                    if (photoBitmap != null) {
-                        // User's photo rendered in preview
-                        val imageBitmap = photoBitmap.asImageBitmap()
-                        drawImage(
-                            image = imageBitmap,
-                            dstSize = androidx.compose.ui.unit.IntSize(w.toInt(), h.toInt())
-                        )
-                        // Scrim
-                        drawRect(
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color(0xCC000000)),
-                                startY = h * 0.5f,
-                                endY = h
-                            )
-                        )
-                        // Route in top right
-                        if (preparedPoints.size >= 2) {
-                            val box = RouteSimplifier.computeBoundingBox(preparedPoints)
-                            val offsets = RouteSimplifier.projectToCanvas(preparedPoints, box, w * 0.45f, h * 0.35f, 20f)
-                            val shiftedOffsets = offsets.map { Offset(it.x + w * 0.5f, it.y + 20f) }
-                            drawRoutePolyline(this, shiftedOffsets, Color.White, 3.5f)
-                        }
-                    } else {
-                        // Placeholder
-                        drawRect(Color(0xFF1B1B22))
-                    }
-                }
-            }
-        }
-
-        // Overlay text / stats widgets on top of Canvas
-        if (config.format == ShareFormat.PHOTO_CARD && photoBitmap == null) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable { onPickPhoto() },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AddPhotoAlternate,
-                    contentDescription = null,
-                    tint = MotoOrange,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Tap to choose a ride photo",
-                    color = TextPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "Route & stats will overlay on your photo",
-                    color = TextSecondary,
-                    fontSize = 11.sp
-                )
-            }
-        } else {
-            // Stats preview badge
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(14.dp)
-            ) {
-                // RYDA watermark top-right
-                Text(
-                    text = "RYDA",
-                    color = if (config.format == ShareFormat.MAP_CARD && config.mapCardStyle == MapCardStyle.LIGHT)
-                        Color(0xFF101114).copy(alpha = 0.6f)
-                    else Color.White.copy(alpha = 0.75f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.align(Alignment.TopEnd)
-                )
-
-                // Stats summary container bottom
-                Card(
-                    modifier = Modifier.align(Alignment.BottomStart),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (config.format == ShareFormat.MAP_CARD && config.mapCardStyle == MapCardStyle.LIGHT)
-                            Color(0xCCFFFFFF)
-                        else Color(0xCC101114)
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            if (config.showDistance) {
-                                Column {
-                                    Text(
-                                        text = "${String.format("%.1f", ride.totalDistanceKm)} km",
-                                        color = MotoOrange,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text("DIST", color = TextSecondary, fontSize = 9.sp)
-                                }
-                            }
-                            if (config.showMovingTime) {
-                                Column {
-                                    Text(
-                                        text = ride.formattedDuration(ride.movingTimeSeconds),
-                                        color = TextPrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text("TIME", color = TextSecondary, fontSize = 9.sp)
-                                }
-                            }
-                            if (config.showAvgSpeed) {
-                                Column {
-                                    val avgSpeed = if (ride.avgSpeedKmh > 0) ride.avgSpeedKmh else if (ride.movingTimeSeconds > 0) (ride.totalDistanceMeters / ride.movingTimeSeconds) * 3.6 else 0.0
-                                    Text(
-                                        text = "${String.format("%.0f", avgSpeed)} km/h",
-                                        color = TextPrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text("AVG", color = TextSecondary, fontSize = 9.sp)
-                                }
-                            }
-                            if (config.showMaxSpeed) {
-                                Column {
-                                    val topSpeed = if (ride.maxSpeedKmh > 0) ride.maxSpeedKmh else points.maxOfOrNull { it.speedKmh } ?: 0.0
-                                    Text(
-                                        text = "${String.format("%.0f", topSpeed)} km/h",
-                                        color = TextPrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text("TOP", color = TextSecondary, fontSize = 9.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun drawRoutePolyline(
-    scope: androidx.compose.ui.graphics.drawscope.DrawScope,
-    offsets: List<Offset>,
-    color: Color,
-    strokeWidth: Float
-) {
-    if (offsets.size < 2) return
-    val path = Path().apply {
-        moveTo(offsets[0].x, offsets[0].y)
-        offsets.drop(1).forEach { lineTo(it.x, it.y) }
-    }
-    scope.drawPath(
-        path = path,
-        color = color,
-        style = Stroke(
-            width = strokeWidth,
-            cap = androidx.compose.ui.graphics.StrokeCap.Round,
-            join = androidx.compose.ui.graphics.StrokeJoin.Round
-        )
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        color = TextSecondary,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
     )
 }
 
 @Composable
-private fun FormatTabChip(
+private fun OptionChip(
     label: String,
     selected: Boolean,
+    accentColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (selected) MotoOrange else SurfaceCard)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) accentColor else SurfaceCard)
+            .border(1.dp, if (selected) accentColor else BorderSubtle, RoundedCornerShape(10.dp))
             .clickable { onClick() }
-            .padding(vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
-            color = if (selected) AsphaltBlack else TextSecondary,
-            fontSize = 11.sp,
+            color = if (selected) AsphaltBlack else TextPrimary,
+            fontSize = 12.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
         )
     }
 }
 
 @Composable
-private fun TemplateThumbCard(
-    label: String,
+private fun ColorCircleSwatch(
+    color: Color,
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
-            .width(100.dp)
-            .height(54.dp)
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(if (selected) color.copy(alpha = 0.22f) else Color.Transparent)
+            .border(
+                width = if (selected) 2.5.dp else 1.dp,
+                color = if (selected) color else BorderSubtle,
+                shape = CircleShape
+            )
             .clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = CarbonDark),
-        border = BorderStroke(1.5.dp, if (selected) MotoOrange else BorderSubtle)
+        contentAlignment = Alignment.Center
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = label,
-                color = if (selected) MotoOrange else TextPrimary,
-                fontSize = 11.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExportSizeChip(
-    label: String,
-    sub: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) MotoOrange.copy(alpha = 0.15f) else CarbonDark
-        ),
-        border = BorderStroke(1.5.dp, if (selected) MotoOrange else BorderSubtle)
-    ) {
-        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = label,
-                color = if (selected) MotoOrange else TextPrimary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = sub,
-                color = TextSecondary,
-                fontSize = 10.sp
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatToggleRow(
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(title, color = TextPrimary, fontSize = 13.sp)
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MotoOrange,
-                checkedTrackColor = MotoOrange.copy(alpha = 0.5f)
-            )
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(color)
         )
     }
 }
@@ -1152,6 +805,7 @@ private fun ShareTargetRow(
     title: String,
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accentColor: Color,
     onClick: () -> Unit
 ) {
     Row(
@@ -1172,7 +826,7 @@ private fun ShareTargetRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MotoOrange,
+                tint = accentColor,
                 modifier = Modifier.size(20.dp)
             )
         }

@@ -147,7 +147,8 @@ class SyncCoordinator private constructor(private val context: Context) {
                         maxSpeedKmh = ride.maxSpeedKmh,
                         avgSpeedKmh = ride.avgSpeedKmh,
                         elevationGainMeters = ride.elevationGainMeters,
-                        elevationLossMeters = ride.elevationLossMeters
+                        elevationLossMeters = ride.elevationLossMeters,
+                        clubRideSessionId = ride.clubRideSessionId
                     )
                     android.util.Log.d("RYDA_SYNC", "Syncing ride header: id=${ride.id}, dist=${ride.totalDistanceMeters}m")
                     val createResp = api.createRide(rideReq)

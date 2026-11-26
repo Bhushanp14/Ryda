@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ryda.app.core.models.Club
+import com.ryda.app.core.models.ClubRideSession
 import com.ryda.app.core.models.CommunityPost
 import com.ryda.app.data.repository.RydaRepository
 import com.ryda.app.ui.theme.*
@@ -36,7 +37,9 @@ import kotlinx.coroutines.launch
 fun ClubDetailScreen(
     club: Club,
     repository: RydaRepository,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onOpenClubRide: (Club, ClubRideSession) -> Unit = { _, _ -> },
+    onCreateClubRide: (Club) -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -44,10 +47,17 @@ fun ClubDetailScreen(
     var clubPosts by remember { mutableStateOf<List<CommunityPost>>(emptyList()) }
     var isLoadingFeed by remember { mutableStateOf(false) }
     var showMoreInfoDialog by remember { mutableStateOf(false) }
-    var selectedTab by remember { mutableStateOf(0) } // 0 = Feed (Default), 1 = Events
+    var selectedTab by remember { mutableStateOf(0) } // 0 = Feed (Default), 1 = Events, 2 = Club Rides
     var clubEvents by remember { mutableStateOf<List<com.ryda.app.core.models.RidingEvent>>(emptyList()) }
+    var upcomingClubRides by remember { mutableStateOf<List<ClubRideSession>>(emptyList()) }
+    var previousClubRides by remember { mutableStateOf<List<ClubRideSession>>(emptyList()) }
+    var isLoadingClubRides by remember { mutableStateOf(false) }
+    var clubRidesError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(club.id) {
+        repository.getClubDetail(club.id)?.let { refreshed ->
+            currentClub = refreshed
+        }
         isLoadingFeed = true
         try {
             val feed = repository.getCommunityFeed("discover")
@@ -66,6 +76,23 @@ fun ClubDetailScreen(
         } catch (_: Exception) {
             clubEvents = emptyList()
         }
+        isLoadingClubRides = true
+        clubRidesError = null
+        repository.getClubRides(club.id, section = "upcoming")
+            .onSuccess { sessions ->
+                upcomingClubRides = sessions
+            }
+            .onFailure { err ->
+                clubRidesError = err.message
+            }
+        repository.getClubRides(club.id, section = "previous")
+            .onSuccess { sessions ->
+                previousClubRides = sessions
+            }
+            .onFailure { err ->
+                if (clubRidesError == null) clubRidesError = err.message
+            }
+        isLoadingClubRides = false
     }
 
     Column(
@@ -234,6 +261,15 @@ fun ClubDetailScreen(
                     .clickable { selectedTab = 1 }
                     .padding(bottom = 8.dp)
             )
+            Text(
+                text = "Club Rides (${upcomingClubRides.size + previousClubRides.size})",
+                color = if (selectedTab == 2) MotoOrange else TextSecondary,
+                style = Typography.labelMedium,
+                fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier
+                    .clickable { selectedTab = 2 }
+                    .padding(bottom = 8.dp)
+            )
         }
 
         HorizontalDivider(color = BorderSubtle, thickness = 1.dp)
@@ -298,7 +334,7 @@ fun ClubDetailScreen(
                         }
                     }
                 }
-            } else {
+            } else if (selectedTab == 1) {
                 // CLUB EVENTS
                 if (clubEvents.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -417,26 +453,111 @@ fun ClubDetailScreen(
                         }
                     }
                 }
-            }
-        }
+            } else {
+                // CLUB RIDES (Scheduled & Active Sessions)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (currentClub.myRole == "LEADER") {
+                        Button(
+                            onClick = { onCreateClubRide(currentClub) },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MotoOrange, contentColor = AsphaltBlack)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Schedule Club Ride", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                    when {
+                        isLoadingClubRides -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = MotoOrange)
+                            }
+                        }
+                        clubRidesError != null -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(clubRidesError!!, color = CrimsonRed, style = Typography.bodySmall)
+                            }
+                        }
+                        upcomingClubRides.isEmpty() && previousClubRides.isEmpty() -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.TwoWheeler, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(48.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("No club rides yet", style = Typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text("Club leaders can schedule group rides here.", style = Typography.bodySmall, color = TextSecondary)
+                                }
+                            }
+                        }
+                        else -> {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                contentPadding = PaddingValues(bottom = 16.dp)
+                            ) {
+                                item(key = "header_upcoming") {
+                                    Text(
+                                        "UPCOMING RIDES",
+                                        style = Typography.labelSmall,
+                                        color = ElectricCyan,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                if (upcomingClubRides.isEmpty()) {
+                                    item(key = "empty_upcoming") {
+                                        Text(
+                                            "No upcoming club rides scheduled.",
+                                            style = Typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                } else {
+                                    items(upcomingClubRides, key = { "upcoming_${it.id}" }) { session ->
+                                        ClubRideSummaryCard(
+                                            session = session,
+                                            isHistorical = false,
+                                            onClick = { onOpenClubRide(currentClub, session) }
+                                        )
+                                    }
+                                }
 
-        // Bottom Actions: Record Ride For This Club
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(AsphaltBlack)
-                .border(androidx.compose.foundation.BorderStroke(0.5.dp, BorderSubtle))
-                .padding(horizontal = 16.dp, vertical = 10.dp)
-        ) {
-            Button(
-                onClick = { onBackClick() },
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MotoOrange, contentColor = AsphaltBlack)
-            ) {
-                Icon(imageVector = Icons.Default.SportsMotorsports, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("RECORD RIDE FOR THIS CLUB", style = Typography.labelLarge, fontWeight = FontWeight.Bold)
+                                item(key = "divider_history") {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                        thickness = 1.dp,
+                                        color = BorderSubtle
+                                    )
+                                }
+
+                                item(key = "header_previous") {
+                                    Text(
+                                        "PREVIOUS RIDES",
+                                        style = Typography.labelSmall,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                if (previousClubRides.isEmpty()) {
+                                    item(key = "empty_previous") {
+                                        Text(
+                                            "No completed or expired club rides yet.",
+                                            style = Typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                } else {
+                                    items(previousClubRides, key = { "previous_${it.id}" }) { session ->
+                                        ClubRideSummaryCard(
+                                            session = session,
+                                            isHistorical = true,
+                                            onClick = { onOpenClubRide(currentClub, session) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -517,5 +638,57 @@ fun ClubDetailScreen(
             },
             containerColor = CarbonDark
         )
+    }
+}
+
+@Composable
+private fun ClubRideSummaryCard(
+    session: ClubRideSession,
+    isHistorical: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CarbonDark.copy(alpha = if (isHistorical) 0.78f else 1f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle)
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StatusPill(session.status, sessionStatusColor(session.status))
+                if (!isHistorical && session.myStatus != null) {
+                    StatusPill(session.myStatus, participantStatusColor(session.myStatus))
+                }
+            }
+            Text(session.title, style = Typography.titleMedium, color = TextPrimary)
+            if (!isHistorical) {
+                Text("Start: ${session.meetingPoint}", style = Typography.bodySmall, color = TextSecondary)
+                Text("Dest: ${session.destination}", style = Typography.bodySmall, color = TextSecondary)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    formatClubRideTime(session.scheduledStart),
+                    style = Typography.labelSmall.copy(fontFamily = StatFontFamily),
+                    color = if (isHistorical) TextSecondary else ElectricCyan
+                )
+                if (!isHistorical) {
+                    Text(
+                        "${session.participantCount}/${session.maxParticipants} riders",
+                        style = Typography.labelSmall,
+                        color = ForestGreen
+                    )
+                }
+            }
+        }
     }
 }

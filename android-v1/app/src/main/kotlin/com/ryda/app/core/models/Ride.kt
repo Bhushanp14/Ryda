@@ -40,7 +40,8 @@ data class Ride(
     val syncStatus: SyncStatus = SyncStatus.LOCAL_ONLY,
     val mediaSyncStatus: MediaSyncStatus = MediaSyncStatus.PENDING,
     val isPrivate: Boolean = true,
-    val photoUri: String? = null
+    val photoUri: String? = null,
+    val clubRideSessionId: String? = null
 ) {
     val totalDistanceKm: Double
         get() = totalDistanceMeters / 1000.0

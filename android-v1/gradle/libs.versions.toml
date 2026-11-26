@@ -43,7 +43,9 @@ androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runt
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3Core" }
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version = "21.3.0" }
-play-services-maps = { module = "com.google.android.gms:play-services-maps", version = "19.0.0" }
+google-navigation = { module = "com.google.android.libraries.navigation:navigation", version = "8.1.0" }
+google-places = { module = "com.google.android.libraries.places:places", version = "4.1.0" }
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs_nio", version = "2.1.5" }
 maps-compose = { module = "com.google.maps.android:maps-compose", version = "6.4.1" }
 compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version = "2.9.1" }

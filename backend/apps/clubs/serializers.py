@@ -83,6 +83,7 @@ class ClubMemberSerializer(serializers.ModelSerializer):
 class ClubSerializer(serializers.ModelSerializer):
     members_count = serializers.SerializerMethodField()
     is_member = serializers.SerializerMethodField()
+    my_role = serializers.SerializerMethodField()
     upcoming_events = serializers.SerializerMethodField()
     slug = serializers.SlugField(required=False)
 
@@ -90,7 +91,8 @@ class ClubSerializer(serializers.ModelSerializer):
         model = Club
         fields = [
             'id', 'name', 'slug', 'description', 'city', 'banner_url', 'logo_url',
-            'is_verified', 'policy', 'total_mileage_km', 'members_count', 'is_member', 'upcoming_events'
+            'is_verified', 'policy', 'total_mileage_km', 'members_count', 'is_member',
+            'my_role', 'upcoming_events'
         ]
         extra_kwargs = {
             'id': {'read_only': False, 'required': False},
@@ -137,6 +139,13 @@ class ClubSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.members.filter(user=request.user).exists()
         return False
+
+    def get_my_role(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            membership = obj.members.filter(user=request.user).first()
+            return membership.role if membership else None
+        return None
 
     def get_upcoming_events(self, obj):
         events = obj.events.all()[:3]

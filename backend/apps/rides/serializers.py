@@ -20,12 +20,14 @@ class RideSerializer(serializers.ModelSerializer):
             'id', 'motorcycle', 'motorcycle_name', 'title', 'status',
             'start_time', 'end_time', 'total_distance_meters', 'total_distance_km',
             'moving_time_seconds', 'elapsed_time_seconds', 'stopped_time_seconds', 'max_speed_kmh',
-            'avg_speed_kmh', 'elevation_gain_meters', 'elevation_loss_meters', 'is_private', 'image_url', 'created_at'
+            'avg_speed_kmh', 'elevation_gain_meters', 'elevation_loss_meters', 'is_private', 'image_url',
+            'club_ride_session', 'created_at'
         )
         read_only_fields = ('created_at',)
         extra_kwargs = {
             'id': {'read_only': False, 'required': False},
-            'motorcycle': {'required': False, 'allow_null': True}
+            'motorcycle': {'required': False, 'allow_null': True},
+            'club_ride_session': {'required': False, 'allow_null': True}
         }
 
     def to_internal_value(self, data):

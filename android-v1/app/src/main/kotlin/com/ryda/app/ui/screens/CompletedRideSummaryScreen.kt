@@ -177,29 +177,23 @@ fun CompletedRideSummaryScreen(
                 }
             }
 
-            // GPX Export button
+            // Share Ride button (redirects to Share Studio)
             Button(
-                onClick = {
-                    try {
-                        GpxExporter.shareGpx(context, ride, points)
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Failed to export GPX: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                },
+                onClick = { onOpenShareStudio(ride.id) },
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard, contentColor = TextPrimary),
                 border = BorderStroke(1.dp, BorderSubtle),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Download,
-                    contentDescription = "Export GPX",
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share Ride",
                     tint = MotoOrange,
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "GPX",
+                    text = "Share",
                     style = Typography.labelSmall,
                     color = TextPrimary
                 )

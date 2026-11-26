@@ -6,7 +6,8 @@ class NotificationType(models.TextChoices):
     ACHIEVEMENT = 'ACHIEVEMENT', 'Achievement'
     CLUB_INVITE = 'CLUB_INVITE', 'Club Invite'
     SOCIAL_LIKE = 'SOCIAL_LIKE', 'Social Like'
-    EVENT = 'EVENT', 'Event'
+    EVENT       = 'EVENT',       'Event'
+    CLUB_RIDE   = 'CLUB_RIDE',   'Club Ride'
 
 class Notification(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

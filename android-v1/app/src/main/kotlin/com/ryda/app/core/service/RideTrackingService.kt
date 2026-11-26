@@ -71,6 +71,7 @@ class RideTrackingService : Service() {
         const val EXTRA_MOTORCYCLE_ID = "EXTRA_MOTORCYCLE_ID"
         const val EXTRA_RIDE_TITLE = "EXTRA_RIDE_TITLE"
         const val EXTRA_RIDE_ID = "EXTRA_RIDE_ID"
+        const val EXTRA_CLUB_RIDE_SESSION_ID = "EXTRA_CLUB_RIDE_SESSION_ID"
 
         private val _trackingState = MutableStateFlow(TrackingState())
         val trackingState: StateFlow<TrackingState> = _trackingState.asStateFlow()
@@ -87,11 +88,20 @@ class RideTrackingService : Service() {
             }
         }
 
-        fun startRide(context: Context, motorcycleId: String? = null, title: String? = null, isSimulation: Boolean = false) {
+        fun startRide(
+            context: Context,
+            motorcycleId: String? = null,
+            title: String? = null,
+            isSimulation: Boolean = false,
+            rideIdOverride: String? = null,
+            clubRideSessionId: String? = null
+        ) {
             val intent = Intent(context, RideTrackingService::class.java).apply {
                 action = if (isSimulation) ACTION_START_SIMULATION else ACTION_START
                 putExtra(EXTRA_MOTORCYCLE_ID, motorcycleId)
                 putExtra(EXTRA_RIDE_TITLE, title)
+                if (rideIdOverride != null) putExtra(EXTRA_RIDE_ID, rideIdOverride)
+                if (clubRideSessionId != null) putExtra(EXTRA_CLUB_RIDE_SESSION_ID, clubRideSessionId)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -152,12 +162,16 @@ class RideTrackingService : Service() {
             ACTION_START -> {
                 val bikeId = intent.getStringExtra(EXTRA_MOTORCYCLE_ID)
                 val title = intent.getStringExtra(EXTRA_RIDE_TITLE) ?: "Motorcycle Ride"
-                startTracking(bikeId, title, isSimulation = false)
+                val rideIdOverride = intent.getStringExtra(EXTRA_RIDE_ID)
+                val clubSessionId = intent.getStringExtra(EXTRA_CLUB_RIDE_SESSION_ID)
+                startTracking(bikeId, title, isSimulation = false, rideIdOverride = rideIdOverride, clubRideSessionId = clubSessionId)
             }
             ACTION_START_SIMULATION -> {
                 val bikeId = intent.getStringExtra(EXTRA_MOTORCYCLE_ID)
                 val title = intent.getStringExtra(EXTRA_RIDE_TITLE) ?: "Simulated Mountain Ride"
-                startTracking(bikeId, title, isSimulation = true)
+                val rideIdOverride = intent.getStringExtra(EXTRA_RIDE_ID)
+                val clubSessionId = intent.getStringExtra(EXTRA_CLUB_RIDE_SESSION_ID)
+                startTracking(bikeId, title, isSimulation = true, rideIdOverride = rideIdOverride, clubRideSessionId = clubSessionId)
             }
             ACTION_PAUSE -> pauseTracking()
             ACTION_RESUME -> resumeTracking()
@@ -207,8 +221,28 @@ class RideTrackingService : Service() {
         startLocationUpdates()
     }
 
-    private fun startTracking(motorcycleId: String?, title: String, isSimulation: Boolean) {
-        val rideId = UUID.randomUUID().toString()
+    private fun startTracking(
+        motorcycleId: String?,
+        title: String,
+        isSimulation: Boolean,
+        rideIdOverride: String? = null,
+        clubRideSessionId: String? = null
+    ) {
+        // Prevent duplicate active recording
+        if (_trackingState.value.isTracking) return
+
+        // Prevent duplicate individual ride for the same Club Ride session
+        if (clubRideSessionId != null) {
+            val existingSessionRide = dbHelper.getRideByClubSessionId(clubRideSessionId)
+            if (existingSessionRide != null) {
+                if (existingSessionRide.status == RideStatus.RECORDING || existingSessionRide.status == RideStatus.PAUSED) {
+                    recoverTracking(existingSessionRide.id)
+                }
+                return
+            }
+        }
+
+        val rideId = rideIdOverride ?: UUID.randomUUID().toString()
         sequenceNumber = 0L
         lastRecordedLocation = null
         gpsFilter.reset()
@@ -218,7 +252,8 @@ class RideTrackingService : Service() {
             motorcycleId = motorcycleId,
             title = title,
             status = RideStatus.RECORDING,
-            startTime = System.currentTimeMillis()
+            startTime = System.currentTimeMillis(),
+            clubRideSessionId = clubRideSessionId
         )
         dbHelper.insertRide(initialRide)
 

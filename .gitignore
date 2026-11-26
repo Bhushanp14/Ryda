@@ -14,3 +14,5 @@ __pycache__/
 backend/ryda_dev.sqlite3
 backend/__pycache__/
 local.properties
+.env
+backend/.env

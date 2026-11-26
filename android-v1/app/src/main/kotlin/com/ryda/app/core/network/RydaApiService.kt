@@ -63,7 +63,8 @@ data class RideRequest(
     @SerialName("max_speed_kmh") val maxSpeedKmh: Double = 0.0,
     @SerialName("avg_speed_kmh") val avgSpeedKmh: Double = 0.0,
     @SerialName("elevation_gain_meters") val elevationGainMeters: Double = 0.0,
-    @SerialName("elevation_loss_meters") val elevationLossMeters: Double = 0.0
+    @SerialName("elevation_loss_meters") val elevationLossMeters: Double = 0.0,
+    @SerialName("club_ride_session") val clubRideSessionId: String? = null
 )
 
 @Serializable
@@ -85,6 +86,7 @@ data class RideResponse(
     @SerialName("elevation_loss_meters") val elevationLossMeters: Double = 0.0,
     @SerialName("is_private") val isPrivate: Boolean = true,
     @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("club_ride_session") val clubRideSessionId: String? = null,
     val points: List<GpsPointDto> = emptyList(),
     val message: String = ""
 )
@@ -311,6 +313,87 @@ interface RydaApiService {
 
     @POST("clubs/events/{id}/rsvp/")
     suspend fun setEventRsvp(@Path("id") id: String, @Body body: Map<String, String>): Response<EventRsvpResponse>
+
+    // ── Club Ride Sessions ────────────────────────────────────────────────────
+    @POST("clubs/routes/compute/")
+    suspend fun computeClubRideRoutes(
+        @Body body: ComputeRouteRequest
+    ): Response<ComputeRouteResponse>
+
+    @GET("clubs/{clubId}/rides/")
+    suspend fun getClubRides(
+        @Path("clubId") clubId: String,
+        @Query("status") status: String? = null,
+        @Query("section") section: String? = null
+    ): Response<List<ClubRideSession>>
+
+    @POST("clubs/{clubId}/rides/")
+    suspend fun createClubRide(
+        @Path("clubId") clubId: String,
+        @Body body: CreateClubRideRequest
+    ): Response<ClubRideSession>
+
+    @GET("clubs/{clubId}/rides/{sessionId}/")
+    suspend fun getClubRideDetail(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String
+    ): Response<ClubRideSession>
+
+    @POST("clubs/{clubId}/rides/{sessionId}/join/")
+    suspend fun joinClubRide(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String
+    ): Response<ClubRideJoinResponse>
+
+    @POST("clubs/{clubId}/rides/{sessionId}/leave/")
+    suspend fun leaveClubRide(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String
+    ): Response<ClubRideJoinResponse>
+
+    @POST("clubs/{clubId}/rides/{sessionId}/ready/")
+    suspend fun markClubRideReady(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String
+    ): Response<ClubRideReadyResponse>
+
+    @GET("clubs/{clubId}/rides/{sessionId}/participants/")
+    suspend fun getClubRideParticipants(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String
+    ): Response<List<ClubRideParticipant>>
+
+    @POST("clubs/{clubId}/rides/{sessionId}/verify/{userId}/")
+    suspend fun verifyClubRideParticipant(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String,
+        @Path("userId") userId: Int
+    ): Response<ClubRideVerifyResponse>
+
+    @POST("clubs/{clubId}/rides/{sessionId}/absent/{userId}/")
+    suspend fun markClubRideParticipantAbsent(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String,
+        @Path("userId") userId: Int
+    ): Response<ClubRideAbsentResponse>
+
+    @POST("clubs/{clubId}/rides/{sessionId}/start/")
+    suspend fun startClubRide(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String
+    ): Response<ClubRideStartResponse>
+
+    @POST("clubs/{clubId}/rides/{sessionId}/cancel/")
+    suspend fun cancelClubRide(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String
+    ): Response<ClubRideStatusResponse>
+
+    @POST("clubs/{clubId}/rides/{sessionId}/complete/")
+    suspend fun completeClubRide(
+        @Path("clubId") clubId: String,
+        @Path("sessionId") sessionId: String
+    ): Response<ClubRideStatusResponse>
 
     // ── Phase 7: Achievements & Notifications ──────────────────────────────────
     @GET("achievements/")

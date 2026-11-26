@@ -32,6 +32,7 @@ android {
     }
   }
   compileOptions {
+    isCoreLibraryDesugaringEnabled = true
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
   }
@@ -47,6 +48,11 @@ android {
       excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
   }
+}
+
+configurations.all {
+  // Navigation SDK bundles its own Google Maps renderer; exclude standalone play-services-maps to prevent duplicate classes.
+  exclude(group = "com.google.android.gms", module = "play-services-maps")
 }
 
 kotlin {
@@ -93,9 +99,11 @@ dependencies {
   implementation(libs.androidx.navigation3.runtime)
   implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 
-  // Location & Icons
+  // Location, Navigation SDK, Places SDK & Icons
+  coreLibraryDesugaring(libs.desugar.jdk.libs)
   implementation(libs.play.services.location)
-  implementation(libs.play.services.maps)
+  implementation(libs.google.navigation)
+  implementation(libs.google.places)
   implementation(libs.maps.compose)
   implementation(libs.compose.material.icons.extended)
 

@@ -26,6 +26,13 @@ class Ride(models.Model):
     elevation_loss_meters = models.FloatField(default=0.0)
     is_private = models.BooleanField(default=True)
     image_url = models.CharField(max_length=500, blank=True, default='')
+    # Nullable link to a ClubRideSession — set when ride is auto-created on session start.
+    club_ride_session = models.ForeignKey(
+        'clubs.ClubRideSession',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='individual_rides'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

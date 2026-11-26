@@ -3,13 +3,27 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'ryda-django-insecure-dev-key-change-in-production')
+# Load backend/.env if present (dependency-free so runserver/daphne work out of the box)
+_env_file = BASE_DIR / '.env'
+if _env_file.is_file():
+    for _raw_line in _env_file.read_text(encoding='utf-8').splitlines():
+        _line = _raw_line.strip()
+        if not _line or _line.startswith('#') or '=' not in _line:
+            continue
+        _key, _val = _line.split('=', 1)
+        _key = _key.strip()
+        _val = _val.strip().strip('"').strip("'")
+        if _key:
+            os.environ.setdefault(_key, _val)
+
+SECRET_KEY = os.environ.get('SECRET_KEY', 'Bhushan@14')
 
 DEBUG = os.environ.get('DEBUG', '1') == '1'
 
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -18,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Third party apps
+    'channels',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
@@ -63,6 +78,24 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+REDIS_URL = os.environ.get('REDIS_URL', '')
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
 
 # Database configuration: defaults to SQLite for immediate local testing, PostGIS when DB_NAME is set in environment
 DB_NAME = os.environ.get('DB_NAME')
@@ -111,3 +144,6 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Server-side Google Routes API key (never exposed to Android clients)
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')

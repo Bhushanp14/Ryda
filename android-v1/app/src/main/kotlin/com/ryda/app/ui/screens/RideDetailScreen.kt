@@ -142,10 +142,7 @@ fun RideDetailScreen(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onShareStudio) {
-                    Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = "Sharing Studio", tint = MotoOrange)
-                }
-                IconButton(onClick = { GpxExporter.shareGpx(context, ride, activePoints) }) {
-                    Icon(imageVector = Icons.Default.Share, contentDescription = "Export GPX", tint = SafetyAmber)
+                    Icon(imageVector = Icons.Default.Share, contentDescription = "Share Ride", tint = SafetyAmber)
                 }
                 IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = CrimsonRed)

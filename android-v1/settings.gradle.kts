@@ -5,6 +5,7 @@ pluginManagement {
         includeGroupByRegex("androidx.*")
         includeGroupByRegex("com\\.android.*")
         includeGroupByRegex("com\\.google.*")
+        includeGroupByRegex("org\\.chromium\\.net.*")
       }
     }
     mavenCentral()
@@ -20,6 +21,7 @@ dependencyResolutionManagement {
         includeGroupByRegex("androidx.*")
         includeGroupByRegex("com\\.android.*")
         includeGroupByRegex("com\\.google.*")
+        includeGroupByRegex("org\\.chromium\\.net.*")
       }
     }
     mavenCentral()

@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Club, ClubMember, RidingEvent, EventRsvp
+from .models import (
+    Club, ClubMember, RidingEvent, EventRsvp,
+    ClubRideSession, ClubRideParticipant,
+)
 
 class ClubMemberInline(admin.TabularInline):
     model = ClubMember
@@ -49,3 +52,29 @@ class EventRsvpAdmin(admin.ModelAdmin):
     list_display = ('event', 'user', 'status', 'created_at', 'updated_at')
     list_filter = ('status', 'created_at')
     search_fields = ('event__title', 'user__username')
+
+
+class ClubRideParticipantInline(admin.TabularInline):
+    model = ClubRideParticipant
+    extra = 0
+    fields = ('user', 'status', 'joined_at', 'ready_at', 'verified_at', 'verified_by', 'individual_ride')
+    readonly_fields = ('joined_at', 'ready_at', 'verified_at')
+
+
+@admin.register(ClubRideSession)
+class ClubRideSessionAdmin(admin.ModelAdmin):
+    list_display = (
+        'title', 'club', 'status', 'scheduled_start', 'expires_at',
+        'actual_start', 'actual_end', 'max_participants', 'created_by',
+    )
+    list_filter = ('status', 'scheduled_start', 'club')
+    search_fields = ('title', 'club__name', 'meeting_point', 'destination')
+    readonly_fields = ('expires_at', 'created_at', 'updated_at')
+    inlines = [ClubRideParticipantInline]
+
+
+@admin.register(ClubRideParticipant)
+class ClubRideParticipantAdmin(admin.ModelAdmin):
+    list_display = ('session', 'user', 'status', 'joined_at', 'ready_at', 'verified_at', 'individual_ride')
+    list_filter = ('status', 'joined_at')
+    search_fields = ('session__title', 'user__username')

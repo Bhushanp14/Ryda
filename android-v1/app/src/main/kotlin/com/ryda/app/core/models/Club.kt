@@ -36,6 +36,7 @@ data class Club(
     @SerialName("total_mileage_km") val totalMileageKm: Double = 0.0,
     @SerialName("members_count") val membersCount: Int = 0,
     @SerialName("is_member") val isMember: Boolean = false,
+    @SerialName("my_role") val myRole: String? = null,
     @SerialName("upcoming_events") val upcomingEvents: List<RidingEvent> = emptyList()
 )
 

@@ -22,6 +22,7 @@ class TokenDataStore(private val context: Context) {
         private val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         /** When true, WorkManager sync workers must NOT upload rides to the server. */
         val KEY_OFFLINE_ONLY = booleanPreferencesKey("offline_only_mode")
+        private val KEY_NAV_SOUND_MODE = stringPreferencesKey("nav_sound_mode")
 
         @Volatile private var instance: TokenDataStore? = null
 
@@ -40,6 +41,10 @@ class TokenDataStore(private val context: Context) {
     /** Emits true while the user has explicitly enabled offline-only mode. */
     val offlineOnlyFlow: Flow<Boolean> =
         context.dataStore.data.map { it[KEY_OFFLINE_ONLY] ?: false }
+    val navSoundModeFlow: Flow<com.ryda.app.core.location.NavigationSoundMode> =
+        context.dataStore.data.map {
+            com.ryda.app.core.location.NavigationSoundMode.fromStored(it[KEY_NAV_SOUND_MODE])
+        }
 
     suspend fun saveToken(token: String, username: String) {
         context.dataStore.edit {
@@ -65,6 +70,10 @@ class TokenDataStore(private val context: Context) {
 
     suspend fun setOfflineOnly(value: Boolean) {
         context.dataStore.edit { it[KEY_OFFLINE_ONLY] = value }
+    }
+
+    suspend fun saveNavSoundMode(mode: com.ryda.app.core.location.NavigationSoundMode) {
+        context.dataStore.edit { it[KEY_NAV_SOUND_MODE] = mode.name }
     }
 
     suspend fun getToken(): String? = tokenFlow.first()
