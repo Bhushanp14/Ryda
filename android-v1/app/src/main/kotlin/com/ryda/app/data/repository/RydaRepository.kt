@@ -7,6 +7,7 @@ import com.ryda.app.core.auth.TokenDataStore
 import com.ryda.app.core.database.RydaDatabaseHelper
 import com.ryda.app.core.models.*
 import com.ryda.app.core.network.ClubEligibilityResponse
+import com.ryda.app.core.network.ClubLeaderboardResponse
 import com.ryda.app.core.network.MotorcycleStatsResponse
 import com.ryda.app.core.network.RetrofitBuilder
 import com.ryda.app.core.network.RydaApiService
@@ -961,6 +962,10 @@ class RydaRepository private constructor(private val context: Context) {
         return db.getAllClubs().filter { it.id.startsWith("club_") && it.id != "club_1" && it.id != "club_2" }
     }
 
+    fun getUserClubs(): List<Club> {
+        return db.getAllClubs().filter { it.isMember }
+    }
+
     // ── Phase 6: Clubs & Organised Events ──────────────────────────────────────
     suspend fun getClubs(city: String? = null): List<Club> {
         val localClubs = db.getAllClubs(city)
@@ -1000,6 +1005,18 @@ class RydaRepository private constructor(private val context: Context) {
             }
         } catch (_: Exception) {
             db.getAllClubs().firstOrNull { it.id == clubId }
+        }
+    }
+
+    suspend fun fetchClubLeaderboard(clubId: String, period: String = "monthly"): ClubLeaderboardResponse? = withContext(Dispatchers.IO) {
+        try {
+            val tokenDs = TokenDataStore.getInstance(context)
+            if (!tokenDs.isLoggedIn()) return@withContext null
+            val api = RetrofitBuilder.getService(tokenDs)
+            val resp = api.getClubLeaderboard(clubId, period)
+            if (resp.isSuccessful) resp.body() else null
+        } catch (e: Exception) {
+            null
         }
     }
 

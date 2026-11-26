@@ -55,8 +55,12 @@ object RideShareRenderer {
             return bitmap
         }
 
-        // TRANSPARENT SVG STYLE PIPELINE (UNTOUCHED & ISOLATED): Render full SVG layout vector + stats
-        canvas.drawColor(Color.parseColor(config.colorTheme.bgHex))
+        // TRANSPARENT SVG STYLE PIPELINE: Render transparent canvas for SVG vector sharing
+        if (config.colorTheme == ColorTheme.PLAIN_BLACK) {
+            canvas.drawColor(Color.parseColor(config.colorTheme.bgHex))
+        } else {
+            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+        }
 
         when (template) {
             SvgLayoutTemplate.HERO_DISTANCE -> {

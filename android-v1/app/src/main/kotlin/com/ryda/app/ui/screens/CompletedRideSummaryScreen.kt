@@ -74,6 +74,8 @@ fun CompletedRideSummaryScreen(
     var selectedPhotoUri by remember { mutableStateOf(ride.photoUri) }
     var previewBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isPublished by remember { mutableStateOf(false) }
+    var showCelebration by remember { mutableStateOf(true) }
+    val celebrationIndex = remember(ride.id) { (ride.id.hashCode() and 0x7FFFFFFF) % 3 }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -273,6 +275,28 @@ fun CompletedRideSummaryScreen(
                             style = Typography.labelSmall.copy(fontFamily = StatFontFamily),
                             color = ElectricCyan
                         )
+                    }
+                }
+            }
+
+            // Post-Ride Safety Reminder (Phase 8)
+            if (ride.maxSpeedKmh >= 110.0) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = CarbonDark),
+                    border = BorderStroke(1.dp, SafetyAmber.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Verified, contentDescription = null, tint = SafetyAmber, modifier = Modifier.size(20.dp))
+                        Column {
+                            Text("Ride Safety Reminder", color = SafetyAmber, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("High speed telemetry detected (Max: ${ride.maxSpeedKmh.toInt()} km/h). Always ride within your limits and obey road safety laws.", color = TextSecondary, fontSize = 11.sp)
+                        }
                     }
                 }
             }
@@ -614,7 +638,83 @@ fun CompletedRideSummaryScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+
+        if (showCelebration) {
+            RideCompletionCelebrationDialog(
+                conceptIndex = celebrationIndex,
+                onDismiss = { showCelebration = false }
+            )
+        }
     }
+}
+
+@Composable
+private fun RideCompletionCelebrationDialog(
+    conceptIndex: Int,
+    onDismiss: () -> Unit
+) {
+    val (title, subtitle, badgeIcon) = when (conceptIndex) {
+        0 -> Triple("FIST-PUMP VICTORY! 👊", "Awesome Ride! Fist pump for knocking out another epic route.", Icons.Default.Verified)
+        1 -> Triple("THUMBS-UP CHAMPION! 👍", "Great Job! Keep pushing those miles and exploring.", Icons.Default.Check)
+        else -> Triple("RIDE COMPLETE LEGEND! 🏆", "Victory! Ride completed and logged to your profile.", Icons.Default.TwoWheeler)
+    }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(1800)
+        onDismiss()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CarbonDark,
+        title = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(SafetyAmber.copy(alpha = 0.2f))
+                        .border(2.dp, SafetyAmber, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = badgeIcon,
+                        contentDescription = null,
+                        tint = SafetyAmber,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = title,
+                    color = SafetyAmber,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
+        },
+        text = {
+            Text(
+                text = subtitle,
+                color = TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = SafetyAmber, contentColor = AsphaltBlack)
+            ) {
+                Text("Awesome!", fontWeight = FontWeight.Bold)
+            }
+        }
+    )
 }
 
 private fun formatDuration(seconds: Long): String {

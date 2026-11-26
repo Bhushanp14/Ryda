@@ -11,6 +11,12 @@ class RiderProfile(models.Model):
     total_rides = models.PositiveIntegerField(default=0)
     total_distance_km = models.FloatField(default=0.0)
     total_time_hours = models.FloatField(default=0.0)
+    longest_ride_km = models.FloatField(default=0.0)
+    highest_monthly_distance_km = models.FloatField(default=0.0)
+    most_rides_monthly = models.PositiveIntegerField(default=0)
+    longest_duration_seconds = models.PositiveIntegerField(default=0)
+    active_tag_ids = models.JSONField(default=list, blank=True)
+    showcased_achievement_ids = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

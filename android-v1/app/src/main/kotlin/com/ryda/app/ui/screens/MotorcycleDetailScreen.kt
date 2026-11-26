@@ -106,7 +106,12 @@ fun MotorcycleDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = CarbonDark),
-                    border = BorderStroke(1.dp, if (motorcycle.isPrimary) SafetyAmber else BorderSubtle)
+                    border =
+
+
+
+
+                        BorderStroke(1.dp, if (motorcycle.isPrimary) SafetyAmber else BorderSubtle)
                 ) {
                     Column {
                         if (!motorcycle.imageUri.isNullOrBlank()) {

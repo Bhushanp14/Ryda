@@ -206,6 +206,25 @@ data class ClubEligibilityResponse(
     @SerialName("needs_posts") val needsPosts: Int = 0
 )
 
+@Serializable
+data class ClubLeaderboardEntry(
+    val rank: Int = 1,
+    @SerialName("user_id") val userId: Int = 0,
+    val username: String = "",
+    @SerialName("display_name") val displayName: String = "",
+    @SerialName("avatar_url") val avatarUrl: String = "",
+    val role: String = "MEMBER",
+    @SerialName("distance_km") val distanceKm: Double = 0.0
+)
+
+@Serializable
+data class ClubLeaderboardResponse(
+    @SerialName("club_id") val clubId: String = "",
+    @SerialName("club_name") val clubName: String = "",
+    val period: String = "monthly",
+    val leaderboard: List<ClubLeaderboardEntry> = emptyList()
+)
+
 // ── Retrofit interface ────────────────────────────────────────────────────────
 
 interface RydaApiService {
@@ -315,6 +334,9 @@ interface RydaApiService {
 
     @GET("clubs/")
     suspend fun getClubs(@Query("city") city: String? = null): Response<List<Club>>
+
+    @GET("clubs/{club_id}/leaderboard/")
+    suspend fun getClubLeaderboard(@Path("club_id") clubId: String, @Query("period") period: String = "monthly"): Response<ClubLeaderboardResponse>
 
     @POST("clubs/")
     suspend fun createClub(@Body body: Map<String, String>): Response<Club>

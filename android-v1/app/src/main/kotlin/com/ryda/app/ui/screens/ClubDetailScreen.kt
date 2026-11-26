@@ -1,6 +1,7 @@
 package com.ryda.app.ui.screens
 
 import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.ryda.app.core.models.Club
 import com.ryda.app.core.models.ClubRideSession
 import com.ryda.app.core.models.CommunityPost
+import com.ryda.app.core.network.ClubLeaderboardResponse
 import com.ryda.app.data.repository.RydaRepository
 import com.ryda.app.ui.theme.*
 import kotlinx.coroutines.launch
@@ -47,7 +49,7 @@ fun ClubDetailScreen(
     var clubPosts by remember { mutableStateOf<List<CommunityPost>>(emptyList()) }
     var isLoadingFeed by remember { mutableStateOf(false) }
     var showMoreInfoDialog by remember { mutableStateOf(false) }
-    var selectedTab by remember { mutableStateOf(0) } // 0 = Feed (Default), 1 = Events, 2 = Club Rides
+    var selectedTab by remember { mutableStateOf(0) } // 0 = Feed (Default), 1 = Events, 2 = Club Rides, 3 = Leaderboard
     var clubEvents by remember { mutableStateOf<List<com.ryda.app.core.models.RidingEvent>>(emptyList()) }
     var upcomingClubRides by remember { mutableStateOf<List<ClubRideSession>>(emptyList()) }
     var previousClubRides by remember { mutableStateOf<List<ClubRideSession>>(emptyList()) }
@@ -71,7 +73,6 @@ fun ClubDetailScreen(
         }
         try {
             val allEvents = repository.getExploreEvents()
-            // Strictly match ONLY events belonging to this specific club
             clubEvents = allEvents.filter { it.clubId == club.id }
         } catch (_: Exception) {
             clubEvents = emptyList()
@@ -119,83 +120,86 @@ fun ClubDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .clickable { onBackClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = TextPrimary
+                    )
                 }
 
-                TextButton(
-                    onClick = { showMoreInfoDialog = true },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-                ) {
-                    Icon(imageVector = Icons.Default.Info, contentDescription = null, tint = MotoOrange, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("More Info", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { showMoreInfoDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "More Info",
+                            tint = MotoOrange
+                        )
+                    }
+
+                    val isMember = currentClub.isMember
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                val res = repository.toggleClubMembership(currentClub.id)
+                                if (res != null) {
+                                    currentClub = currentClub.copy(
+                                        isMember = res.isMember,
+                                        membersCount = res.membersCount
+                                    )
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isMember) SurfaceCard else MotoOrange,
+                            contentColor = if (isMember) TextPrimary else AsphaltBlack
+                        )
+                    ) {
+                        Text(
+                            text = if (isMember) "Joined ✓" else "Join Club",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
 
-            // Club Avatar & Join Button
-            Row(
+            // Emblem Icon
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .align(Alignment.BottomStart)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
+                    .padding(start = 20.dp, bottom = 10.dp)
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(SurfaceCard)
+                    .border(2.dp, MotoOrange, CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CarbonDark)
-                        .border(2.dp, BorderSubtle, RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(imageVector = Icons.Default.Groups, contentDescription = null, tint = MotoOrange, modifier = Modifier.size(36.dp))
-                }
-
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            val res = repository.toggleClubMembership(currentClub.id)
-                            if (res != null) {
-                                currentClub = currentClub.copy(
-                                    isMember = res.isMember,
-                                    membersCount = res.membersCount
-                                )
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (currentClub.isMember) ForestGreen else MotoOrange
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = if (currentClub.isMember) "Member (Joined) ✓" else (if (currentClub.policy == "REQUEST") "Request to Join" else "Join Club"),
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Groups,
+                    contentDescription = null,
+                    tint = MotoOrange,
+                    modifier = Modifier.size(36.dp)
+                )
             }
         }
 
-        // Club Meta Header
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = currentClub.name, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        // Club Meta
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = currentClub.name,
+                    color = TextPrimary,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
                 if (currentClub.isVerified) {
+                    Spacer(modifier = Modifier.width(6.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(SurfaceCard)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(ForestGreen.copy(alpha = 0.2f))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text("Verified Club", color = ForestGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -236,15 +240,15 @@ fun ClubDetailScreen(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Club Navigation Underline Tabs
+        // Club Navigation Underline Tabs (Feed, Events, Club Rides, Leaderboard)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "Club Feed (${clubPosts.size})",
+                text = "Feed (${clubPosts.size})",
                 color = if (selectedTab == 0) MotoOrange else TextSecondary,
                 style = Typography.labelMedium,
                 fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
@@ -253,7 +257,7 @@ fun ClubDetailScreen(
                     .padding(bottom = 8.dp)
             )
             Text(
-                text = "Club Events (${clubEvents.size})",
+                text = "Events (${clubEvents.size})",
                 color = if (selectedTab == 1) MotoOrange else TextSecondary,
                 style = Typography.labelMedium,
                 fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
@@ -262,12 +266,21 @@ fun ClubDetailScreen(
                     .padding(bottom = 8.dp)
             )
             Text(
-                text = "Club Rides (${upcomingClubRides.size + previousClubRides.size})",
+                text = "Rides (${upcomingClubRides.size + previousClubRides.size})",
                 color = if (selectedTab == 2) MotoOrange else TextSecondary,
                 style = Typography.labelMedium,
                 fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier
                     .clickable { selectedTab = 2 }
+                    .padding(bottom = 8.dp)
+            )
+            Text(
+                text = "Leaderboard",
+                color = if (selectedTab == 3) MotoOrange else TextSecondary,
+                style = Typography.labelMedium,
+                fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier
+                    .clickable { selectedTab = 3 }
                     .padding(bottom = 8.dp)
             )
         }
@@ -278,7 +291,7 @@ fun ClubDetailScreen(
         // ── TAB CONTENT ────────────────────────────────────────────────────────
         Box(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
             if (selectedTab == 0) {
-                // CLUB ACTIVITY FEED (DEFAULT)
+                // CLUB ACTIVITY FEED
                 if (isLoadingFeed) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = MotoOrange)
@@ -356,7 +369,7 @@ fun ClubDetailScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(containerColor = CarbonDark),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, if (event.isOfficial) MotoOrange.copy(alpha = 0.5f) else BorderSubtle)
+                                border = BorderStroke(1.dp, if (event.isOfficial) MotoOrange.copy(alpha = 0.5f) else BorderSubtle)
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
                                     Row(
@@ -411,7 +424,6 @@ fun ClubDetailScreen(
 
                                     Spacer(modifier = Modifier.height(12.dp))
 
-                                    // RSVP Controls
                                     var rsvpStatus by remember { mutableStateOf(event.myRsvp) }
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Button(
@@ -453,8 +465,8 @@ fun ClubDetailScreen(
                         }
                     }
                 }
-            } else {
-                // CLUB RIDES (Scheduled & Active Sessions)
+            } else if (selectedTab == 2) {
+                // CLUB RIDES
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (currentClub.myRole == "LEADER") {
                         Button(
@@ -558,6 +570,9 @@ fun ClubDetailScreen(
                         }
                     }
                 }
+            } else if (selectedTab == 3) {
+                // CLUB LEADERBOARD TAB
+                ClubLeaderboardTab(clubId = currentClub.id, repository = repository)
             }
         }
     }
@@ -578,7 +593,6 @@ fun ClubDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.verticalScroll(rememberScrollState())
                 ) {
-                    // About Section
                     Text("ABOUT", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Text(currentClub.description.ifEmpty { "No description provided." }, color = TextPrimary, fontSize = 13.sp)
                     Text("Location: ${currentClub.city}", color = TextSecondary, fontSize = 12.sp)
@@ -586,7 +600,6 @@ fun ClubDetailScreen(
 
                     HorizontalDivider(color = BorderSubtle)
 
-                    // Members Section
                     Text("MEMBERS & LEADERSHIP", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(SurfaceCard), contentAlignment = Alignment.Center) {
@@ -600,7 +613,6 @@ fun ClubDetailScreen(
 
                     HorizontalDivider(color = BorderSubtle)
 
-                    // Statistics Section
                     Text("CLUB STATISTICS", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Total Mileage:", color = TextSecondary, fontSize = 12.sp)
@@ -642,53 +654,193 @@ fun ClubDetailScreen(
 }
 
 @Composable
+private fun ClubLeaderboardTab(
+    clubId: String,
+    repository: RydaRepository
+) {
+    var period by remember { mutableStateOf("monthly") }
+    var leaderboardResponse by remember { mutableStateOf<ClubLeaderboardResponse?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(clubId, period) {
+        isLoading = true
+        leaderboardResponse = repository.fetchClubLeaderboard(clubId, period)
+        isLoading = false
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val isMonthly = period == "monthly"
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isMonthly) SafetyAmber else CarbonDark)
+                    .border(1.dp, if (isMonthly) SafetyAmber else BorderSubtle, RoundedCornerShape(10.dp))
+                    .clickable { period = "monthly" }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Monthly Distance", color = if (isMonthly) AsphaltBlack else TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
+            val isAllTime = period == "all_time"
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isAllTime) SafetyAmber else CarbonDark)
+                    .border(1.dp, if (isAllTime) SafetyAmber else BorderSubtle, RoundedCornerShape(10.dp))
+                    .clickable { period = "all_time" }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("All-Time Distance", color = if (isAllTime) AsphaltBlack else TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = SafetyAmber)
+            }
+        } else {
+            val entries = leaderboardResponse?.leaderboard ?: emptyList()
+            if (entries.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(imageVector = Icons.Default.EmojiEvents, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(44.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("No member rides recorded for this period yet", color = TextSecondary, fontSize = 13.sp)
+                    }
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 20.dp)
+                ) {
+                    items(entries) { item ->
+                        val rankColor = when (item.rank) {
+                            1 -> SafetyAmber
+                            2 -> Color(0xFFC0C0C0)
+                            3 -> Color(0xFFCD7F32)
+                            else -> TextSecondary
+                        }
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = CarbonDark),
+                            border = BorderStroke(1.dp, if (item.rank <= 3) rankColor.copy(alpha = 0.5f) else BorderSubtle)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(rankColor.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("#${item.rank}", color = rankColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(text = item.displayName.ifBlank { item.username }, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = item.role, color = TextSecondary, fontSize = 11.sp)
+                                    }
+                                }
+
+                                Text(text = "${item.distanceKm} km", color = SafetyAmber, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ClubRideSummaryCard(
     session: ClubRideSession,
     isHistorical: Boolean,
     onClick: () -> Unit
 ) {
+    val isActive = session.status == "ACTIVE"
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CarbonDark.copy(alpha = if (isHistorical) 0.78f else 1f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = CarbonDark),
+        border = BorderStroke(
+            1.dp,
+            if (isActive) MotoOrange else BorderSubtle
+        )
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                StatusPill(session.status, sessionStatusColor(session.status))
-                if (!isHistorical && session.myStatus != null) {
-                    StatusPill(session.myStatus, participantStatusColor(session.myStatus))
-                }
-            }
-            Text(session.title, style = Typography.titleMedium, color = TextPrimary)
-            if (!isHistorical) {
-                Text("Start: ${session.meetingPoint}", style = Typography.bodySmall, color = TextSecondary)
-                Text("Dest: ${session.destination}", style = Typography.bodySmall, color = TextSecondary)
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    formatClubRideTime(session.scheduledStart),
-                    style = Typography.labelSmall.copy(fontFamily = StatFontFamily),
-                    color = if (isHistorical) TextSecondary else ElectricCyan
-                )
-                if (!isHistorical) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        "${session.participantCount}/${session.maxParticipants} riders",
+                        text = session.title,
+                        style = Typography.titleMedium,
+                        color = TextPrimary,
+                        maxLines = 1
+                    )
+                    if (isActive) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MotoOrange.copy(alpha = 0.2f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("LIVE", style = Typography.labelSmall, color = MotoOrange, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${session.meetingPoint.ifBlank { "Start" }} ➔ ${session.destination}",
+                    style = Typography.bodySmall,
+                    color = TextSecondary,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = session.scheduledStart.take(16),
+                        style = Typography.labelSmall.copy(fontFamily = StatFontFamily),
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "${session.participantCount} riders",
                         style = Typography.labelSmall,
                         color = ForestGreen
                     )
                 }
             }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

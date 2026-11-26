@@ -6,7 +6,8 @@ from .views import (
     ClubEventsView,
     ExploreEventsView,
     EventRsvpToggleView,
-    ClubEligibilityView
+    ClubEligibilityView,
+    ClubLeaderboardView
 )
 from .session_views import (
     ClubRideSessionListCreateView,
@@ -32,6 +33,7 @@ urlpatterns = [
     path('<uuid:pk>/', ClubDetailView.as_view(), name='club-detail'),
     path('<uuid:club_id>/join/', ClubJoinToggleView.as_view(), name='club-join-toggle'),
     path('<uuid:club_id>/events/', ClubEventsView.as_view(), name='club-events'),
+    path('<uuid:club_id>/leaderboard/', ClubLeaderboardView.as_view(), name='club-leaderboard'),
 
     # Club Ride Sessions (separate from RidingEvent)
     path('<uuid:club_id>/rides/', ClubRideSessionListCreateView.as_view(), name='club-ride-list-create'),

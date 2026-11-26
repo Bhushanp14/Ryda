@@ -24,6 +24,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 
+data class SosAlertEvent(
+    val eventId: String,
+    val userId: Int,
+    val displayName: String,
+    val lat: Double,
+    val lng: Double,
+    val accuracy: Float,
+    val timestampIso: String,
+    val receivedAtMs: Long = System.currentTimeMillis()
+)
+
 data class LiveSharingState(
     val isActive: Boolean = false,
     val sessionId: String? = null,
@@ -31,7 +42,8 @@ data class LiveSharingState(
     val isSharingOwnLocation: Boolean = true,
     val connectionState: WsConnectionState = WsConnectionState.DISCONNECTED,
     val participantLocations: Map<Int, LiveParticipantLocation> = emptyMap(),
-    val lastSessionEvent: String? = null
+    val lastSessionEvent: String? = null,
+    val lastSosAlert: SosAlertEvent? = null
 )
 
 class LiveLocationService : Service() {
@@ -49,6 +61,7 @@ class LiveLocationService : Service() {
         const val ACTION_START = "ACTION_START_LIVE_LOCATION"
         const val ACTION_STOP = "ACTION_STOP_LIVE_LOCATION"
         const val ACTION_SET_SHARING = "ACTION_SET_SHARING"
+        const val ACTION_SEND_SOS = "ACTION_SEND_SOS"
 
         const val EXTRA_SESSION_ID = "EXTRA_SESSION_ID"
         const val EXTRA_SESSION_TITLE = "EXTRA_SESSION_TITLE"
@@ -74,6 +87,16 @@ class LiveLocationService : Service() {
             val intent = Intent(context, LiveLocationService::class.java).apply {
                 action = ACTION_SET_SHARING
                 putExtra(EXTRA_IS_SHARING, isSharing)
+            }
+            context.startService(intent)
+        }
+
+        fun sendSosAlert(context: Context, lat: Double, lng: Double, accuracy: Float = 0f) {
+            val intent = Intent(context, LiveLocationService::class.java).apply {
+                action = ACTION_SEND_SOS
+                putExtra("lat", lat)
+                putExtra("lng", lng)
+                putExtra("accuracy", accuracy)
             }
             context.startService(intent)
         }
@@ -127,6 +150,12 @@ class LiveLocationService : Service() {
                 _liveState.value = _liveState.value.copy(isSharingOwnLocation = isSharing)
                 wsClient?.sendSharingVisibility(isSharing)
             }
+            ACTION_SEND_SOS -> {
+                val lat = intent.getDoubleExtra("lat", 0.0)
+                val lng = intent.getDoubleExtra("lng", 0.0)
+                val acc = intent.getFloatExtra("accuracy", 0.0f)
+                wsClient?.sendSosAlert(lat, lng, acc)
+            }
             ACTION_STOP -> {
                 stopLiveSession()
             }
@@ -156,7 +185,13 @@ class LiveLocationService : Service() {
                         _liveState.value = LiveSharingState(lastSessionEvent = evt)
                     }
                 }
-            )
+            ).apply {
+                onSosAlert = { eventId, userId, displayName, lat, lng, accuracy, timestamp ->
+                    _liveState.value = _liveState.value.copy(
+                        lastSosAlert = SosAlertEvent(eventId, userId, displayName, lat, lng, accuracy, timestamp)
+                    )
+                }
+            }
             wsClient = client
             _liveState.value = LiveSharingState(
                 isActive = true,
@@ -187,7 +222,6 @@ class LiveLocationService : Service() {
                 .build()
             fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
         } catch (_: SecurityException) {
-            // Permission denied or revoked: stop live sharing safely
             stopLiveSession()
         }
     }

@@ -197,10 +197,51 @@ class ClubRideLocationConsumer(AsyncWebsocketConsumer):
                     },
                 )
 
+        elif msg_type == 'sos_alert':
+            try:
+                lat = float(data.get('lat') or data.get('latitude', 0.0))
+                lng = float(data.get('lng') or data.get('longitude', 0.0))
+                acc = float(data.get('accuracy', 0.0))
+            except (TypeError, ValueError):
+                return
+
+            profile = await self._get_user_profile(self.user)
+            disp_name = profile.get('display_name') or self.user.username
+
+            sos_payload = {
+                'type': 'sos_alert',
+                'event_id': data.get('event_id') or str(uuid.uuid4()),
+                'user_id': self.user.id,
+                'username': self.user.username,
+                'display_name': disp_name,
+                'avatar_url': profile.get('avatar_url', ''),
+                'lat': lat,
+                'lng': lng,
+                'accuracy': acc,
+                'timestamp': data.get('timestamp') or timezone.now().isoformat(),
+                'status': data.get('status', 'ACTIVE')
+            }
+
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    'type': 'broadcast_message',
+                    'payload': sos_payload,
+                },
+            )
+
     async def broadcast_message(self, event):
         await self.send(text_data=json.dumps(event['payload']))
 
     # ── Auth & DB helpers ──────────────────────────────────────────────────────
+
+    @database_sync_to_async
+    def _get_user_profile(self, user):
+        from apps.profiles.models import RiderProfile
+        profile = RiderProfile.objects.filter(user=user).first()
+        if profile:
+            return {'display_name': profile.display_name, 'avatar_url': profile.avatar_url}
+        return {'display_name': user.username, 'avatar_url': ''}
 
     @database_sync_to_async
     def _authenticate(self):

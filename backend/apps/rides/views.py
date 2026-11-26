@@ -319,23 +319,60 @@ class RideCompleteView(APIView):
 
         ride.save()
 
-        # Update lifetime rider totals
+        # Update lifetime rider totals & Personal Records (PR System)
         user_rides = Ride.objects.filter(rider=request.user, status=RideStatus.COMPLETED)
         total_rides = user_rides.count()
         total_dist_km = sum(r.total_distance_km for r in user_rides)
         total_hours = sum(r.moving_time_seconds for r in user_rides) / 3600.0
 
-        profile, _ = RiderProfile.objects.get_or_create(user=request.user)
+        profile, _ = RiderProfile.objects.get_or_create(user=request.user, defaults={'display_name': request.user.username})
+
+        pr_updates = []
+        ride_km = ride.total_distance_km
+        if ride_km > profile.longest_ride_km:
+            profile.longest_ride_km = round(ride_km, 2)
+            pr_updates.append(f"Longest Ride: {profile.longest_ride_km} km")
+
+        moving_sec = ride.moving_time_seconds
+        if moving_sec > profile.longest_duration_seconds:
+            profile.longest_duration_seconds = moving_sec
+            hrs = moving_sec // 3600
+            mins = (moving_sec % 3600) // 60
+            dur_str = f"{hrs}h {mins}m" if hrs > 0 else f"{mins}m"
+            pr_updates.append(f"Longest Duration: {dur_str}")
+
+        now = timezone.now()
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        monthly_rides = Ride.objects.filter(rider=request.user, status=RideStatus.COMPLETED, start_time__gte=start_of_month)
+        monthly_dist_km = sum(r.total_distance_km for r in monthly_rides)
+        monthly_count = monthly_rides.count()
+
+        if monthly_dist_km > profile.highest_monthly_distance_km:
+            profile.highest_monthly_distance_km = round(monthly_dist_km, 2)
+            pr_updates.append(f"Highest Monthly Distance: {profile.highest_monthly_distance_km} km")
+
+        if monthly_count > profile.most_rides_monthly:
+            profile.most_rides_monthly = monthly_count
+            pr_updates.append(f"Most Monthly Rides: {profile.most_rides_monthly} rides")
+
         profile.total_rides = total_rides
         profile.total_distance_km = round(total_dist_km, 2)
         profile.total_time_hours = round(total_hours, 2)
         profile.save()
+
+        # Trigger event-driven achievement evaluation
+        try:
+            from apps.achievements.services import evaluate_user_achievements
+            evaluate_user_achievements(request.user)
+        except Exception:
+            pass
 
         serialized_ride = RideSerializer(ride).data
         response_data = dict(serialized_ride)
         response_data['message'] = 'Ride marked as complete and verified.'
         response_data['ride'] = serialized_ride
         response_data['calculated_stats'] = stats
+        response_data['new_personal_records'] = pr_updates
 
         return Response(response_data)
 

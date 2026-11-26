@@ -35,6 +35,7 @@ class ClubRideWebSocketClient(
     private val authToken: String,
     private val onSessionEvent: (String) -> Unit = {}
 ) {
+    var onSosAlert: ((eventId: String, userId: Int, displayName: String, lat: Double, lng: Double, accuracy: Float, timestampIso: String) -> Unit)? = null
     private val client = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
         .pingInterval(20, TimeUnit.SECONDS)
@@ -171,8 +172,30 @@ class ClubRideWebSocketClient(
                 "session_started", "session_completed", "session_cancelled" -> {
                     onSessionEvent(json.optString("type"))
                 }
+                "sos_alert" -> {
+                    onSosAlert?.invoke(
+                        json.optString("event_id"),
+                        json.optInt("user_id"),
+                        json.optString("display_name").ifBlank { json.optString("username") },
+                        json.optDouble("lat"),
+                        json.optDouble("lng"),
+                        json.optDouble("accuracy", 0.0).toFloat(),
+                        json.optString("timestamp")
+                    )
+                }
             }
         } catch (_: Exception) {}
+    }
+
+    fun sendSosAlert(lat: Double, lng: Double, accuracy: Float = 0f) {
+        val payload = JSONObject().apply {
+            put("type", "sos_alert")
+            put("lat", lat)
+            put("lng", lng)
+            put("accuracy", accuracy.toDouble())
+            put("timestamp", Instant.now().toString())
+        }
+        webSocket?.send(payload.toString())
     }
 
     fun sendLocationUpdate(

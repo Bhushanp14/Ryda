@@ -24,6 +24,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.Dash
@@ -52,6 +53,17 @@ import com.ryda.app.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
+
+data class SosAlertData(
+    val eventId: String,
+    val userId: Int,
+    val displayName: String,
+    val lat: Double,
+    val lng: Double,
+    val accuracy: Float,
+    val timestampIso: String
+)
 
 @Composable
 fun ClubRideActiveScreen(
@@ -72,14 +84,11 @@ fun ClubRideActiveScreen(
     val trackingState by RideTrackingService.trackingState.collectAsState()
     val liveState by LiveLocationService.liveState.collectAsState()
 
-    // Persisted navigation sound preference (defaults to SOUND_ON)
-    val persistedSoundMode by (
-        tokenDataStore?.navSoundModeFlow?.collectAsState(initial = NavigationSoundMode.SOUND_ON)
-            ?: remember { mutableStateOf(NavigationSoundMode.SOUND_ON) }
-        )
-    var soundMode by remember(persistedSoundMode) { mutableStateOf(persistedSoundMode) }
+    val persistedSoundMode by tokenDataStore?.navSoundModeFlow?.collectAsState(initial = NavigationSoundMode.SOUND_ON)
+        ?: remember { mutableStateOf(NavigationSoundMode.SOUND_ON) }
+
+    var soundMode by remember { mutableStateOf(persistedSoundMode) }
     var lastNonMutedMode by remember { mutableStateOf(NavigationSoundMode.SOUND_ON) }
-    var showSoundMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(persistedSoundMode) {
         soundMode = persistedSoundMode
@@ -98,23 +107,44 @@ fun ClubRideActiveScreen(
         }
     }
 
-    // ── Auto-finalize individual ride when group session ends (connected devices) ──────────────
-    // Triggered by the WebSocket `session_completed` event received by LiveLocationService.
-    // Guard: only finalize if this device is actively tracking a ride linked to this session.
-    // LiveLocationService.stopLiveSession() is already called by LiveLocationService itself when
-    // `session_completed` is received; we only need to finalize the individual RideTrackingService.
+    val navigationView = remember {
+        NavigationView(context).apply {
+            onCreate(null)
+        }
+    }
+
+    var navigator by remember { mutableStateOf<Navigator?>(null) }
+    var navMap by remember { mutableStateOf<GoogleMap?>(null) }
+
+    suspend fun safelyCleanupNavigation() {
+        withContext(Dispatchers.Main) {
+            try {
+                navigator?.stopGuidance()
+            } catch (_: Exception) {}
+            try {
+                navigator?.cleanup()
+            } catch (_: Exception) {}
+            try {
+                navigationView.onStop()
+                navigationView.onPause()
+                navigationView.onDestroy()
+            } catch (_: Exception) {}
+            navigator = null
+            navMap = null
+        }
+    }
+
     LaunchedEffect(liveState.lastSessionEvent) {
-        if (liveState.lastSessionEvent == "session_completed") {
-            val tracking = RideTrackingService.trackingState.value
-            val myRideId = session.myIndividualRideId
-            // Finalize only if actively tracking and the ride is linked to this club session
-            val isLinkedRide = myRideId == null || tracking.currentRideId == myRideId
-            if (tracking.isTracking && isLinkedRide) {
-                RideTrackingService.finishRide(context)
-                SyncCoordinator.getInstance(context).triggerSync()
-            }
-            // Note: group live-location sharing is already stopped by LiveLocationService.
-            // Do NOT call LiveLocationService.stopSharing() here to avoid double-stop.
+        if (liveState.lastSessionEvent == "session_completed" || liveState.lastSessionEvent == "session_cancelled") {
+            ClubRideShutdownCoordinator.handleSessionEnd(
+                context = context,
+                repository = repository,
+                clubId = session.clubId,
+                sessionId = session.id,
+                isAdminEnding = false,
+                onNavigationCleanup = { safelyCleanupNavigation() },
+                onComplete = { onClubRideEnded() }
+            )
         }
     }
 
@@ -123,17 +153,37 @@ fun ClubRideActiveScreen(
     var showEndClubRideDialog by remember { mutableStateOf(false) }
     var isEndingClubRide by remember { mutableStateOf(false) }
     var actionError by remember { mutableStateOf<String?>(null) }
+    var showSosConfirmDialog by remember { mutableStateOf(false) }
+    var activeSosAlert by remember { mutableStateOf<SosAlertData?>(null) }
+    var sosToastMessage by remember { mutableStateOf<String?>(null) }
 
-    // Local marker visibility: hides/shows OTHER riders' markers without disabling own sharing.
+    LaunchedEffect(liveState.lastSosAlert) {
+        liveState.lastSosAlert?.let { sos ->
+            activeSosAlert = SosAlertData(
+                eventId = sos.eventId,
+                userId = sos.userId,
+                displayName = sos.displayName,
+                lat = sos.lat,
+                lng = sos.lng,
+                accuracy = sos.accuracy,
+                timestampIso = sos.timestampIso
+            )
+        }
+    }
+
+    LaunchedEffect(sosToastMessage) {
+        if (sosToastMessage != null) {
+            kotlinx.coroutines.delay(3000)
+            sosToastMessage = null
+        }
+    }
+
+    // Local marker visibility
     var showOtherRiders by remember { mutableStateOf(true) }
-
-    var navigator by remember { mutableStateOf<Navigator?>(null) }
-    var navMap by remember { mutableStateOf<GoogleMap?>(null) }
     var navError by remember { mutableStateOf<String?>(null) }
     var hasArrived by remember { mutableStateOf(false) }
     var isReroutingWarning by remember { mutableStateOf(false) }
 
-    // Apply sound mode changes directly to Navigation SDK without interrupting navigation/GPS/sharing
     LaunchedEffect(navigator, soundMode) {
         navigator?.setAudioGuidance(soundMode.toAudioGuidance())
     }
@@ -157,34 +207,32 @@ fun ClubRideActiveScreen(
         }
     }
 
-    val navigationView = remember {
-        NavigationView(context).apply {
-            onCreate(null)
-        }
-    }
-
-    // Forward Android lifecycle events to NavigationView
     DisposableEffect(lifecycleOwner, navigationView) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> navigationView.onStart()
-                Lifecycle.Event.ON_RESUME -> navigationView.onResume()
-                Lifecycle.Event.ON_PAUSE -> navigationView.onPause()
-                Lifecycle.Event.ON_STOP -> navigationView.onStop()
-                Lifecycle.Event.ON_DESTROY -> navigationView.onDestroy()
+                Lifecycle.Event.ON_START -> try { navigationView.onStart() } catch (_: Exception) {}
+                Lifecycle.Event.ON_RESUME -> try { navigationView.onResume() } catch (_: Exception) {}
+                Lifecycle.Event.ON_PAUSE -> try { navigationView.onPause() } catch (_: Exception) {}
+                Lifecycle.Event.ON_STOP -> try { navigationView.onStop() } catch (_: Exception) {}
+                Lifecycle.Event.ON_DESTROY -> try { navigationView.onDestroy() } catch (_: Exception) {}
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            navigator?.stopGuidance()
-            navigator?.cleanup()
-            navigationView.onDestroy()
+            try {
+                navigator?.stopGuidance()
+                navigator?.cleanup()
+            } catch (_: Exception) {}
+            try {
+                navigationView.onDestroy()
+            } catch (_: Exception) {}
+            navigator = null
+            navMap = null
         }
     }
 
-    // Initialize Navigation SDK Navigator & draw fixed shared route on NavigationView's GoogleMap
     LaunchedEffect(session.id) {
         navigationView.getMapAsync { googleMap ->
             navMap = googleMap
@@ -221,7 +269,6 @@ fun ClubRideActiveScreen(
                     readyNav.setAudioGuidance(soundMode.toAudioGuidance())
 
                     readyNav.addReroutingListener {
-                        // Flag off-route deviation; never overwrite the shared ClubRideSession route
                         isReroutingWarning = true
                     }
                     readyNav.addArrivalListener {
@@ -251,292 +298,112 @@ fun ClubRideActiveScreen(
                         val routingOptions = RoutingOptions().apply {
                             travelMode(RoutingOptions.TravelMode.TWO_WHEELER)
                         }
-                        val pending = readyNav.setDestinations(navWaypoints, routingOptions)
-                        pending.setOnResultListener { status ->
-                            if (status == Navigator.RouteStatus.OK) {
-                                readyNav.startGuidance()
-                            } else {
-                                navError = "Navigation route status: $status"
-                            }
-                        }
-                    } else {
-                        navError = "This Club Ride has no destination coordinates."
+                        readyNav.setDestination(navWaypoints.first(), routingOptions)
+                        readyNav.startGuidance()
                     }
                 }
 
-                override fun onError(@NavigationApi.ErrorCode errorCode: Int) {
-                    navError = when (errorCode) {
-                        NavigationApi.ErrorCode.NOT_AUTHORIZED ->
-                            "Navigation SDK not authorized for this API key."
-                        NavigationApi.ErrorCode.TERMS_NOT_ACCEPTED ->
-                            "Google Navigation Terms must be accepted."
-                        else ->
-                            "Navigation SDK initialization failed (code $errorCode)."
-                    }
+                override fun onError(errorCode: Int) {
+                    navError = "Navigation error code: $errorCode"
                 }
             }
         )
     }
 
-    // Overlay live verified participant markers + return-to-fixed-route guidance line
-    LaunchedEffect(navMap, liveState.participantLocations, showOtherRiders, fixedGuidance) {
+    // Render other riders' live positions
+    LaunchedEffect(liveState.participantLocations, navMap, showOtherRiders) {
         val map = navMap ?: return@LaunchedEffect
-
-        // Clear and re-render participant markers
         participantMarkers.forEach { it.remove() }
         participantMarkers.clear()
 
-        if (showOtherRiders) {
-            val nowMs = System.currentTimeMillis()
-            liveState.participantLocations.values.forEach { p ->
-                val isStale = p.isStale(nowMs)
-                val ageSec = ((nowMs - p.receivedAtMs) / 1000L).coerceAtLeast(0L)
-                val marker = map.addMarker(
-                    MarkerOptions()
-                        .position(LatLng(p.lat, p.lng))
-                        .title(p.username)
-                        .snippet(if (isStale) "Stale • ${ageSec}s ago" else "${p.speedKmh.toInt()} km/h")
-                        .alpha(if (isStale) 0.55f else 1.0f)
-                        .icon(
-                            BitmapDescriptorFactory.defaultMarker(
-                                if (isStale) BitmapDescriptorFactory.HUE_YELLOW
-                                else BitmapDescriptorFactory.HUE_AZURE
-                            )
-                        )
-                )
-                if (marker != null) participantMarkers.add(marker)
+        if (!showOtherRiders) return@LaunchedEffect
+
+        val otherRiders = liveState.participantLocations.values
+        otherRiders.forEach { p ->
+            val marker = map.addMarker(
+                MarkerOptions()
+                    .position(LatLng(p.lat, p.lng))
+                    .title(p.username)
+                    .snippet("Speed: ${p.speedKmh.toInt()} km/h")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+            )
+            if (marker != null) {
+                participantMarkers.add(marker)
             }
         }
+    }
 
-        // Dashed return-to-fixed-route polyline when deviated
+    // Draw return guide polyline when off route
+    LaunchedEffect(fixedGuidance, currentLat, currentLng, navMap) {
+        val map = navMap ?: return@LaunchedEffect
         returnGuidePolyline?.remove()
         returnGuidePolyline = null
-        if (fixedGuidance != null && fixedGuidance.isOffRoute && currentLat != null && currentLng != null) {
+
+        val guidance = fixedGuidance
+        if (guidance != null && guidance.isOffRoute && currentLat != null && currentLng != null) {
             returnGuidePolyline = map.addPolyline(
                 PolylineOptions()
-                    .add(
-                        LatLng(currentLat, currentLng),
-                        LatLng(fixedGuidance.nearestPointLat, fixedGuidance.nearestPointLng)
-                    )
-                    .color(android.graphics.Color.parseColor("#FF00E5FF"))
-                    .width(9f)
-                    .pattern(listOf(Dash(20f), Gap(12f)))
+                    .add(LatLng(currentLat, currentLng), LatLng(guidance.nearestPointLat, guidance.nearestPointLng))
+                    .color(android.graphics.Color.parseColor("#FF3B30"))
+                    .width(8f)
+                    .pattern(listOf(Dash(30f), Gap(20f)))
             )
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AsphaltBlack)
-    ) {
-        // Top Bar
+    Column(modifier = Modifier.fillMaxSize().background(AsphaltBlack)) {
+        // Top App Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .background(CarbonDark)
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(CarbonDark)
-                        .clickable { onBackClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-                }
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(session.title, style = Typography.titleMedium, color = TextPrimary, maxLines = 1)
-                    Text(
-                        "${liveState.connectionState.name} • ${liveState.participantLocations.size} sharing",
-                        style = Typography.labelSmall,
-                        color = ElectricCyan
-                    )
-                }
+            IconButton(onClick = onBackClick) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                // Quick Mute/Unmute Speaker Icon + 3-Mode Sound Selector
-                Box {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(CarbonDark)
-                            .border(
-                                1.dp,
-                                if (soundMode == NavigationSoundMode.MUTED) BorderSubtle else MotoOrange.copy(alpha = 0.6f),
-                                RoundedCornerShape(20.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = when (soundMode) {
-                                NavigationSoundMode.SOUND_ON -> Icons.Default.VolumeUp
-                                NavigationSoundMode.ALERTS_ONLY -> Icons.Default.NotificationsActive
-                                NavigationSoundMode.MUTED -> Icons.Default.VolumeOff
-                            },
-                            contentDescription = "Toggle Navigation Mute",
-                            tint = when (soundMode) {
-                                NavigationSoundMode.SOUND_ON -> MotoOrange
-                                NavigationSoundMode.ALERTS_ONLY -> WarningGold
-                                NavigationSoundMode.MUTED -> TextSecondary
-                            },
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clickable {
-                                    if (soundMode == NavigationSoundMode.MUTED) {
-                                        updateSoundMode(lastNonMutedMode)
-                                    } else {
-                                        updateSoundMode(NavigationSoundMode.MUTED)
-                                    }
-                                }
-                        )
-                        Row(
-                            modifier = Modifier.clickable { showSoundMenu = true },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = soundMode.shortLabel,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "Select Sound Mode",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                Text(text = session.title, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(text = "Destination: ${session.destination}", color = TextSecondary, fontSize = 11.sp, maxLines = 1)
+            }
 
-                    DropdownMenu(
-                        expanded = showSoundMenu,
-                        onDismissRequest = { showSoundMenu = false },
-                        containerColor = CarbonDark
-                    ) {
-                        NavigationSoundMode.entries.forEach { mode ->
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = when (mode) {
-                                                NavigationSoundMode.SOUND_ON -> Icons.Default.VolumeUp
-                                                NavigationSoundMode.ALERTS_ONLY -> Icons.Default.NotificationsActive
-                                                NavigationSoundMode.MUTED -> Icons.Default.VolumeOff
-                                            },
-                                            contentDescription = null,
-                                            tint = if (soundMode == mode) MotoOrange else TextSecondary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = mode.label,
-                                            color = if (soundMode == mode) MotoOrange else TextPrimary,
-                                            fontWeight = if (soundMode == mode) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    }
-                                },
-                                trailingIcon = {
-                                    if (soundMode == mode) {
-                                        Icon(Icons.Default.Check, contentDescription = null, tint = MotoOrange, modifier = Modifier.size(16.dp))
-                                    }
-                                },
-                                onClick = {
-                                    updateSoundMode(mode)
-                                    showSoundMenu = false
-                                }
-                            )
-                        }
-                    }
+            // Sound Toggle Button
+            IconButton(onClick = {
+                if (soundMode == NavigationSoundMode.MUTED) {
+                    updateSoundMode(lastNonMutedMode)
+                } else {
+                    updateSoundMode(NavigationSoundMode.MUTED)
                 }
-
-                FilterChip(
-                    selected = showOtherRiders,
-                    onClick = { showOtherRiders = !showOtherRiders },
-                    label = {
-                        Text(
-                            if (showOtherRiders) "Riders On" else "Riders Hidden",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+            }) {
+                Icon(
+                    imageVector = when (soundMode) {
+                        NavigationSoundMode.MUTED -> Icons.Default.VolumeOff
+                        NavigationSoundMode.SOUND_ON -> Icons.Default.VolumeUp
+                        NavigationSoundMode.ALERTS_ONLY -> Icons.Default.NotificationsActive
                     },
-                    leadingIcon = {
-                        Icon(
-                            if (showOtherRiders) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                    contentDescription = "Sound Mode",
+                    tint = if (soundMode == NavigationSoundMode.MUTED) TextSecondary else MotoOrange
                 )
             }
         }
 
-        // Session Ended by Leader Notification Banner
-        if (liveState.lastSessionEvent == "session_completed") {
-            val rideFinalized = !RideTrackingService.trackingState.value.isTracking
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(ElectricCyan.copy(alpha = 0.16f))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    if (rideFinalized)
-                        "Club Ride ended by leader. Your personal ride has been saved and will sync shortly. ✓"
-                    else
-                        "Club Ride ended by leader. Group sharing stopped; your personal ride recording is preserved.",
-                    color = ElectricCyan,
-                    style = Typography.bodySmall
-                )
-            }
-        }
-
-        // Action Error Banner
-        if (actionError != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CrimsonRed.copy(alpha = 0.2f))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(actionError!!, color = CrimsonRed, style = Typography.bodySmall)
-            }
-        }
-
-        // Navigation Error Banner
-        if (navError != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(WarningGold.copy(alpha = 0.2f))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(navError!!, color = WarningGold, style = Typography.bodySmall)
-            }
-        }
-
-        // Fixed-Route Deviation / Arrival Banner
+        // Arrival Banner
         if (hasArrived) {
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(ForestGreen.copy(alpha = 0.2f))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .border(0.5.dp, ForestGreen)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Arrived at destination: ${session.destination}", color = ForestGreen, style = Typography.labelMedium)
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ForestGreen, modifier = Modifier.size(18.dp))
+                Text("Destination Reached! Great ride.", color = ForestGreen, style = Typography.labelMedium, fontWeight = FontWeight.Bold)
             }
         } else if (fixedGuidance?.isOffRoute == true || isReroutingWarning) {
             val distText = fixedGuidance?.let { "${it.distanceToRouteMeters.toInt()} m" } ?: ""
@@ -559,12 +426,44 @@ fun ClubRideActiveScreen(
             }
         }
 
-        // Full-Screen Google Navigation SDK NavigationView
+        // Full-Screen Google Navigation SDK NavigationView + SOS Overlay Button
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             AndroidView(
                 factory = { navigationView },
                 modifier = Modifier.fillMaxSize()
             )
+
+            // Prominent Circular Red SOS Button Overlay on Map
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .size(54.dp)
+                    .clip(CircleShape)
+                    .background(CrimsonRed)
+                    .border(2.dp, Color.White, CircleShape)
+                    .clickable { showSosConfirmDialog = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(imageVector = Icons.Default.Warning, contentDescription = "SOS", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Text("SOS", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
+            }
+
+            if (sosToastMessage != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(CarbonDark)
+                        .border(1.dp, CrimsonRed, RoundedCornerShape(20.dp))
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(text = sosToastMessage!!, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
 
         // Bottom Telemetry & Sharing Bar
@@ -641,31 +540,16 @@ fun ClubRideActiveScreen(
                     }
                 }
             }
-
-            OutlinedButton(
-                onClick = onOpenRideHud,
-                modifier = Modifier.fillMaxWidth().height(38.dp),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Text("OPEN RECORDING HUD", style = Typography.labelMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
-            }
         }
     }
 
-    // Confirmation Dialog: Finish My Ride (individual participant only)
+    // Confirmation Dialog: Finish My Ride
     if (showFinishRideDialog) {
         AlertDialog(
             onDismissRequest = { showFinishRideDialog = false },
             containerColor = CarbonDark,
-            titleContentColor = TextPrimary,
-            textContentColor = TextSecondary,
-            title = { Text("Finish My Ride?", style = Typography.titleMedium, fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    "This will stop and save your personal ride recording and sync it normally. " +
-                        "The Club Ride session will remain active for other participants."
-                )
-            },
+            title = { Text("Finish Individual Ride?", style = Typography.titleMedium, fontWeight = FontWeight.Bold) },
+            text = { Text("This will complete and archive your solo ride recording. You will remain in the group ride session.") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -674,7 +558,7 @@ fun ClubRideActiveScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MotoOrange, contentColor = AsphaltBlack)
                 ) {
-                    Text("Finish My Ride", fontWeight = FontWeight.Bold)
+                    Text("Finish Ride", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -703,27 +587,21 @@ fun ClubRideActiveScreen(
                 Button(
                     enabled = !isEndingClubRide,
                     onClick = {
-                        val repo = repository
-                        if (repo == null) {
-                            showEndClubRideDialog = false
-                            onClubRideEnded()
-                            return@Button
-                        }
                         isEndingClubRide = true
                         actionError = null
-                        scope.launch {
-                            repo.completeClubRide(session.clubId, session.id)
-                                .onSuccess {
-                                    isEndingClubRide = false
-                                    showEndClubRideDialog = false
-                                    onClubRideEnded()
-                                }
-                                .onFailure { err ->
-                                    isEndingClubRide = false
-                                    showEndClubRideDialog = false
-                                    actionError = err.message ?: "Failed to end Club Ride."
-                                }
-                        }
+                        ClubRideShutdownCoordinator.handleSessionEnd(
+                            context = context,
+                            repository = repository,
+                            clubId = session.clubId,
+                            sessionId = session.id,
+                            isAdminEnding = true,
+                            onNavigationCleanup = { safelyCleanupNavigation() },
+                            onComplete = {
+                                isEndingClubRide = false
+                                showEndClubRideDialog = false
+                                onClubRideEnded()
+                            }
+                        )
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = CrimsonRed, contentColor = TextPrimary)
                 ) {
@@ -738,6 +616,106 @@ fun ClubRideActiveScreen(
                     Text("Cancel", color = TextSecondary)
                 }
             }
+        )
+    }
+
+    // SOS Confirmation Dialog
+    if (showSosConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showSosConfirmDialog = false },
+            containerColor = CarbonDark,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = CrimsonRed, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("TRIGGER EMERGENCY SOS?", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text(
+                    "This will immediately broadcast an urgent emergency alert with your current GPS coordinates to all active participants in this group ride.",
+                    color = TextSecondary,
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSosConfirmDialog = false
+                        val lat = currentLat ?: session.startLat ?: 0.0
+                        val lng = currentLng ?: session.startLng ?: 0.0
+                        LiveLocationService.sendSosAlert(context, lat, lng, trackingState.currentSpeedKmh.toFloat())
+                        sosToastMessage = "🚨 SOS Alert Broadcasted to Group Ride!"
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonRed, contentColor = TextPrimary)
+                ) {
+                    Text("BROADCAST SOS", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSosConfirmDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            }
+        )
+    }
+
+    // Received SOS Alert Dialog
+    activeSosAlert?.let { sos ->
+        AlertDialog(
+            onDismissRequest = {},
+            containerColor = CarbonDark,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Warning, contentDescription = null, tint = CrimsonRed, modifier = Modifier.size(26.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("🚨 RIDER SOS EMERGENCY 🚨", color = CrimsonRed, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "${sos.displayName} has raised an urgent SOS emergency alert during the group ride!",
+                        color = TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Last Known Coordinates:\nLat: ${String.format(Locale.US, "%.5f", sos.lat)}, Lng: ${String.format(Locale.US, "%.5f", sos.lng)}",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "Timestamp: ${sos.timestampIso.take(19).replace('T', ' ')}",
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            navMap?.animateCamera(
+                                CameraUpdateFactory.newLatLngZoom(
+                                    LatLng(sos.lat, sos.lng), 16f
+                                )
+                            )
+                            activeSosAlert = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MotoOrange, contentColor = AsphaltBlack)
+                    ) {
+                        Text("View on Map", fontWeight = FontWeight.Bold)
+                    }
+                    Button(
+                        onClick = { activeSosAlert = null },
+                        colors = ButtonDefaults.buttonColors(containerColor = ForestGreen, contentColor = TextPrimary)
+                    ) {
+                        Text("Acknowledge", fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {}
         )
     }
 }

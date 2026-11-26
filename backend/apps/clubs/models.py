@@ -299,3 +299,32 @@ class EventRsvp(models.Model):
     class Meta:
         app_label = 'clubs'
         unique_together = ('event', 'user')
+
+
+class SosStatus(models.TextChoices):
+    ACTIVE = 'ACTIVE', 'Active'
+    ACKNOWLEDGED = 'ACKNOWLEDGED', 'Acknowledged'
+    RESOLVED = 'RESOLVED', 'Resolved'
+    CANCELLED = 'CANCELLED', 'Cancelled'
+
+
+class ClubRideSosEvent(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(ClubRideSession, on_delete=models.CASCADE, related_name='sos_events')
+    rider = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sos_events_raised')
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    accuracy = models.FloatField(default=0.0)
+    timestamp = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=20, choices=SosStatus.choices, default=SosStatus.ACTIVE)
+    acknowledged_by = models.ManyToManyField(User, blank=True, related_name='sos_events_acknowledged')
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='sos_events_resolved')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'clubs'
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"SOS by {self.rider.username} in {self.session.title} [{self.status}]"

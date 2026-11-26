@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import views, generics, permissions, status
 from rest_framework.response import Response
 from .models import Club, ClubMember, RidingEvent, EventRsvp
@@ -149,4 +150,60 @@ class EventRsvpToggleView(views.APIView):
             'my_rsvp': current_status,
             'confirmed_count': event.rsvps.filter(status='GOING').count(),
             'interested_count': event.rsvps.filter(status='INTERESTED').count()
+        }, status=status.HTTP_200_OK)
+
+class ClubLeaderboardView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, club_id):
+        club = get_object_or_404(Club, id=club_id)
+        period = request.query_params.get('period', 'monthly').lower()
+
+        members = ClubMember.objects.filter(club=club).select_related('user', 'user__rider_profile')
+
+        leaderboard_entries = []
+        now = timezone.now()
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        from apps.rides.models import Ride, RideStatus
+        from django.db.models import Sum
+
+        for m in members:
+            u = m.user
+            profile = getattr(u, 'rider_profile', None)
+            disp_name = profile.display_name if profile else u.username
+            avatar = profile.avatar_url if profile else ''
+
+            if period == 'monthly':
+                dist_m = Ride.objects.filter(
+                    rider=u,
+                    status=RideStatus.COMPLETED,
+                    start_time__gte=start_of_month
+                ).aggregate(total=Sum('total_distance_meters'))['total'] or 0.0
+            else: # 'all_time'
+                dist_m = Ride.objects.filter(
+                    rider=u,
+                    status=RideStatus.COMPLETED
+                ).aggregate(total=Sum('total_distance_meters'))['total'] or 0.0
+
+            dist_km = dist_m / 1000.0
+            leaderboard_entries.append({
+                'user_id': u.id,
+                'username': u.username,
+                'display_name': disp_name,
+                'avatar_url': avatar,
+                'role': m.role,
+                'distance_km': round(dist_km, 1)
+            })
+
+        leaderboard_entries.sort(key=lambda x: x['distance_km'], reverse=True)
+
+        for idx, entry in enumerate(leaderboard_entries):
+            entry['rank'] = idx + 1
+
+        return Response({
+            'club_id': str(club.id),
+            'club_name': club.name,
+            'period': period,
+            'leaderboard': leaderboard_entries
         }, status=status.HTTP_200_OK)
