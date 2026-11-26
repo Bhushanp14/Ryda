@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -70,6 +72,7 @@ fun GarageScreen(
     onEditMotorcycle: (Motorcycle) -> Unit = {},
     onSetPrimary: (String) -> Unit,
     onDeleteMotorcycle: (String) -> Unit,
+    onViewStats: (String) -> Unit = {},
     onBackClick: (() -> Unit)? = null
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
@@ -142,6 +145,7 @@ fun GarageScreen(
                 MotorcycleCard(
                     bike = bike,
                     onSetPrimary = { onSetPrimary(bike.id) },
+                    onViewStats = { onViewStats(bike.id) },
                     onEdit = { bikeToEdit = bike },
                     onDelete = { onDeleteMotorcycle(bike.id) }
                 )
@@ -280,7 +284,7 @@ fun GarageScreen(
         )
     }
 
-    // Edit Motorcycle Dialog (PRD Phase 2)
+    // Edit Motorcycle Dialog
     bikeToEdit?.let { currentBike ->
         var editBrand by remember(currentBike) { mutableStateOf(currentBike.brand) }
         var editModel by remember(currentBike) { mutableStateOf(currentBike.model) }
@@ -416,14 +420,17 @@ fun GarageScreen(
 fun MotorcycleCard(
     bike: Motorcycle,
     onSetPrimary: () -> Unit,
+    onViewStats: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onViewStats() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CarbonDark),
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             if (bike.isPrimary) SafetyAmber else BorderSubtle
         )
@@ -490,25 +497,36 @@ fun MotorcycleCard(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (!bike.isPrimary) {
-                        OutlinedButton(
-                            onClick = onSetPrimary,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.height(36.dp)
-                        ) {
-                            Text("Set as Default", fontSize = 12.sp)
+                    OutlinedButton(
+                        onClick = onViewStats,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.BarChart, contentDescription = null, tint = SafetyAmber, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Stats & History", fontSize = 12.sp, color = TextPrimary)
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (!bike.isPrimary) {
+                            OutlinedButton(
+                                onClick = onSetPrimary,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Text("Default", fontSize = 12.sp)
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit", tint = SafetyAmber)
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = CrimsonRed)
+                        IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit", tint = SafetyAmber)
+                        }
+                        IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = CrimsonRed)
+                        }
                     }
                 }
             }

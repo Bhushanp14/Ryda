@@ -7,6 +7,7 @@ import com.ryda.app.core.auth.TokenDataStore
 import com.ryda.app.core.database.RydaDatabaseHelper
 import com.ryda.app.core.models.*
 import com.ryda.app.core.network.ClubEligibilityResponse
+import com.ryda.app.core.network.MotorcycleStatsResponse
 import com.ryda.app.core.network.RetrofitBuilder
 import com.ryda.app.core.network.RydaApiService
 import com.ryda.app.core.utils.MediaStorageHelper
@@ -207,6 +208,26 @@ class RydaRepository private constructor(private val context: Context) {
                 }
             } catch (_: Exception) {}
         }
+    }
+
+    suspend fun fetchMotorcycleStats(bikeId: String): MotorcycleStatsResponse? = withContext(Dispatchers.IO) {
+        try {
+            val tokenDs = TokenDataStore.getInstance(context)
+            if (!tokenDs.isLoggedIn()) return@withContext db.calculateMotorcycleStats(bikeId)
+            val api = RetrofitBuilder.getService(tokenDs)
+            val resp = api.getMotorcycleStats(bikeId)
+            if (resp.isSuccessful) resp.body() else db.calculateMotorcycleStats(bikeId)
+        } catch (e: Exception) {
+            db.calculateMotorcycleStats(bikeId)
+        }
+    }
+
+    fun calculateLocalMotorcycleStats(bikeId: String): MotorcycleStatsResponse {
+        return db.calculateMotorcycleStats(bikeId)
+    }
+
+    fun getCompletedRidesForMotorcycle(bikeId: String): List<Ride> {
+        return db.getRidesForMotorcycle(bikeId)
     }
 
     fun updateProfile(profile: RiderProfile) {

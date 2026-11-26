@@ -106,6 +106,7 @@ fun AppNavigation() {
     var showRideHistory by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showGarage by remember { mutableStateOf(false) }
+    var selectedGarageBikeId by remember { mutableStateOf<String?>(null) }
     var showAchievements by remember { mutableStateOf(false) }
     var showTags by remember { mutableStateOf(false) }
 
@@ -280,10 +281,11 @@ fun AppNavigation() {
             BackHandler(
                 enabled = showShareStudio || showRideHistory || showSettings || showGarage ||
                     showAchievements || showTags || selectedRideId != null || selectedClub != null ||
-                    isHudOpen || showAddPhotosForRideId != null || showNotificationDrawer
+                    isHudOpen || showAddPhotosForRideId != null || showNotificationDrawer || selectedGarageBikeId != null
             ) {
                 when {
                     showNotificationDrawer -> showNotificationDrawer = false
+                    selectedGarageBikeId != null -> selectedGarageBikeId = null
                     showShareStudio -> showShareStudio = false
                     showAddPhotosForRideId != null -> {
                         // Skip photo for ride, go to ride detail
@@ -450,6 +452,22 @@ fun AppNavigation() {
                             )
                         }
 
+                        selectedGarageBikeId != null -> {
+                            val bike = motorcycles.firstOrNull { it.id == selectedGarageBikeId }
+                            if (bike != null) {
+                                MotorcycleDetailScreen(
+                                    motorcycle = bike,
+                                    repository = repository,
+                                    onRideClick = { rideId ->
+                                        selectedRideId = rideId
+                                    },
+                                    onBackClick = { selectedGarageBikeId = null }
+                                )
+                            } else {
+                                selectedGarageBikeId = null
+                            }
+                        }
+
                         showGarage -> {
                             GarageScreen(
                                 motorcycles = motorcycles,
@@ -457,6 +475,7 @@ fun AppNavigation() {
                                 onEditMotorcycle = { repository.updateMotorcycle(it) },
                                 onSetPrimary = { repository.setPrimaryMotorcycle(it) },
                                 onDeleteMotorcycle = { repository.deleteMotorcycle(it) },
+                                onViewStats = { bikeId -> selectedGarageBikeId = bikeId },
                                 onBackClick = { showGarage = false }
                             )
                         }

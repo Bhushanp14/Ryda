@@ -18,6 +18,7 @@ import com.ryda.app.core.models.RideTelemetrySnippet
 import com.ryda.app.core.models.RiderProfile
 import com.ryda.app.core.models.RidingEvent
 import com.ryda.app.core.models.SyncStatus
+import com.ryda.app.core.network.MotorcycleStatsResponse
 import java.util.UUID
 
 class RydaDatabaseHelper private constructor(context: Context) :
@@ -1150,5 +1151,59 @@ class RydaDatabaseHelper private constructor(context: Context) :
             }
             db.insertWithOnConflict("rally_events", null, values, SQLiteDatabase.CONFLICT_REPLACE)
         }
+    }
+
+    fun getRidesForMotorcycle(bikeId: String): List<Ride> {
+        val list = mutableListOf<Ride>()
+        try {
+            val query = "SELECT * FROM rides WHERE motorcycle_id = ? AND status = 'COMPLETED' ORDER BY start_time DESC"
+            readableDatabase.rawQuery(query, arrayOf(bikeId)).use { cursor ->
+                while (cursor.moveToNext()) {
+                    list.add(cursorToRide(cursor))
+                }
+            }
+        } catch (_: Exception) {}
+        return list
+    }
+
+    fun calculateMotorcycleStats(bikeId: String): MotorcycleStatsResponse {
+        val rides = getRidesForMotorcycle(bikeId)
+        val totalRides = rides.size
+        val totalDistanceMeters = rides.sumOf { it.totalDistanceMeters }
+        val totalDistanceKm = totalDistanceMeters / 1000.0
+        val totalRidingTimeSeconds = rides.sumOf { it.movingTimeSeconds.toLong() }
+        val avgDistanceKm = if (totalRides > 0) totalDistanceKm / totalRides else 0.0
+        val longestRide = rides.maxByOrNull { it.totalDistanceMeters }
+        val longestRideKm = longestRide?.totalDistanceKm ?: 0.0
+        val avgSpeedKmh = if (totalRides > 0) rides.map { it.avgSpeedKmh }.average() else 0.0
+
+        val monthly = mutableMapOf<String, Double>()
+        val yearly = mutableMapOf<String, Double>()
+        val dateFormatMonth = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US)
+        val dateFormatYear = java.text.SimpleDateFormat("yyyy", java.util.Locale.US)
+
+        for (r in rides) {
+            val date = java.util.Date(r.startTime)
+            val mKey = dateFormatMonth.format(date)
+            val yKey = dateFormatYear.format(date)
+            monthly[mKey] = (monthly[mKey] ?: 0.0) + r.totalDistanceKm
+            yearly[yKey] = (yearly[yKey] ?: 0.0) + r.totalDistanceKm
+        }
+
+        return MotorcycleStatsResponse(
+            motorcycleId = bikeId,
+            motorcycleName = "Motorcycle",
+            totalDistanceKm = Math.round(totalDistanceKm * 100.0) / 100.0,
+            totalDistanceMeters = totalDistanceMeters,
+            totalRides = totalRides,
+            totalRidingTimeSeconds = totalRidingTimeSeconds,
+            avgDistanceKm = Math.round(avgDistanceKm * 100.0) / 100.0,
+            longestRideKm = Math.round(longestRideKm * 100.0) / 100.0,
+            longestRideId = longestRide?.id,
+            longestRideTitle = longestRide?.title,
+            avgSpeedKmh = Math.round(avgSpeedKmh * 10.0) / 10.0,
+            monthlyDistance = monthly,
+            yearlyDistance = yearly
+        )
     }
 }

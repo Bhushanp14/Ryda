@@ -18,7 +18,11 @@ class RideListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Ride.objects.filter(rider=self.request.user)
+        qs = Ride.objects.filter(rider=self.request.user)
+        moto_id = self.request.query_params.get('motorcycle') or self.request.query_params.get('motorcycle_id')
+        if moto_id:
+            qs = qs.filter(motorcycle_id=moto_id)
+        return qs
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)

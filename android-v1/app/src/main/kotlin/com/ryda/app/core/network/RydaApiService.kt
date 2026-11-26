@@ -159,6 +159,23 @@ data class MotorcycleResponse(
 }
 
 @Serializable
+data class MotorcycleStatsResponse(
+    @SerialName("motorcycle_id") val motorcycleId: String,
+    @SerialName("motorcycle_name") val motorcycleName: String,
+    @SerialName("total_distance_km") val totalDistanceKm: Double,
+    @SerialName("total_distance_meters") val totalDistanceMeters: Double,
+    @SerialName("total_rides") val totalRides: Int,
+    @SerialName("total_riding_time_seconds") val totalRidingTimeSeconds: Long,
+    @SerialName("avg_distance_km") val avgDistanceKm: Double,
+    @SerialName("longest_ride_km") val longestRideKm: Double,
+    @SerialName("longest_ride_id") val longestRideId: String?,
+    @SerialName("longest_ride_title") val longestRideTitle: String?,
+    @SerialName("avg_speed_kmh") val avgSpeedKmh: Double,
+    @SerialName("monthly_distance") val monthlyDistance: Map<String, Double> = emptyMap(),
+    @SerialName("yearly_distance") val yearlyDistance: Map<String, Double> = emptyMap()
+)
+
+@Serializable
 data class ProfileResponse(
     @Serializable(with = LenientIdSerializer::class) val id: String = "",
     val username: String = "",
@@ -225,6 +242,9 @@ interface RydaApiService {
     // Garage
     @GET("garage/motorcycles/")
     suspend fun getMotorcycles(): Response<List<MotorcycleResponse>>
+
+    @GET("garage/motorcycles/{id}/stats/")
+    suspend fun getMotorcycleStats(@Path("id") id: String): Response<MotorcycleStatsResponse>
 
     @POST("garage/motorcycles/")
     suspend fun createMotorcycle(@Body body: MotorcycleRequest): Response<MotorcycleResponse>
