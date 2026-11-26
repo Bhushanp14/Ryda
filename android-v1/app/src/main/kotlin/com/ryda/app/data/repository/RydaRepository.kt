@@ -234,11 +234,10 @@ class RydaRepository private constructor(private val context: Context) {
     fun updateProfile(profile: RiderProfile) {
         scope.launch {
             var updatedProfile = profile
+            var serverAvatarUrl: String? = null
+
             if (profile.avatarUrl.isNotBlank() && (profile.avatarUrl.startsWith("content://") || profile.avatarUrl.startsWith("file://"))) {
                 val savedAvatar = com.ryda.app.core.utils.MediaStorageHelper.saveImageToInternalStorage(context, profile.avatarUrl, "profile_avatar", "avatar")
-                if (savedAvatar != null) {
-                    updatedProfile = profile.copy(avatarUrl = savedAvatar)
-                }
 
                 try {
                     val tokenDs = TokenDataStore.getInstance(context)
@@ -253,13 +252,22 @@ class RydaRepository private constructor(private val context: Context) {
                             val body = MultipartBody.Part.createFormData("avatar", "avatar.jpg", reqFile)
                             val uploadResp = api.uploadProfileAvatar(body)
                             if (uploadResp.isSuccessful && !uploadResp.body()?.avatarUrl.isNullOrBlank()) {
-                                val serverAvatar = uploadResp.body()!!.avatarUrl!!
-                                updatedProfile = updatedProfile.copy(avatarUrl = serverAvatar)
+                                serverAvatarUrl = uploadResp.body()!!.avatarUrl!!
+                                updatedProfile = updatedProfile.copy(avatarUrl = serverAvatarUrl)
+                            } else if (savedAvatar != null) {
+                                updatedProfile = profile.copy(avatarUrl = savedAvatar)
                             }
+                        } else if (savedAvatar != null) {
+                            updatedProfile = profile.copy(avatarUrl = savedAvatar)
                         }
+                    } else if (savedAvatar != null) {
+                        updatedProfile = profile.copy(avatarUrl = savedAvatar)
                     }
                 } catch (e: Exception) {
                     Log.e("RYDA_REPO", "Avatar multipart upload error: ${e.message}")
+                    if (savedAvatar != null) {
+                        updatedProfile = profile.copy(avatarUrl = savedAvatar)
+                    }
                 }
             }
 
@@ -270,15 +278,21 @@ class RydaRepository private constructor(private val context: Context) {
                 val tokenDs = TokenDataStore.getInstance(context)
                 if (tokenDs.isLoggedIn()) {
                     val api = RetrofitBuilder.getService(tokenDs)
-                    api.patchProfile(mapOf(
+                    val patchMap = mutableMapOf(
                         "display_name" to updatedProfile.displayName,
                         "bio" to updatedProfile.bio,
                         "city" to updatedProfile.city,
-                        "avatar_url" to updatedProfile.avatarUrl,
                         "is_profile_public" to updatedProfile.isProfilePublic.toString()
-                    ))
+                    )
+                    // Only include avatar_url in PATCH if it is a valid server URL (not local device file:// or content://)
+                    if (!updatedProfile.avatarUrl.startsWith("content://") && !updatedProfile.avatarUrl.startsWith("file://")) {
+                        patchMap["avatar_url"] = updatedProfile.avatarUrl
+                    }
+                    api.patchProfile(patchMap)
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.e("RYDA_REPO", "Profile patch error: ${e.message}")
+            }
         }
     }
 
