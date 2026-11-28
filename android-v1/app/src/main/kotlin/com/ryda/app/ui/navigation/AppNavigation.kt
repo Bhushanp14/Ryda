@@ -247,7 +247,7 @@ fun AppNavigation() {
     when (dest) {
 
         AppDest.LOADING -> {
-            Box(Modifier.fillMaxSize().background(AsphaltBlack))
+            com.ryda.app.ui.components.RiderLoadingScreen()
         }
 
         AppDest.PERMISSION_EXPLAINER -> {

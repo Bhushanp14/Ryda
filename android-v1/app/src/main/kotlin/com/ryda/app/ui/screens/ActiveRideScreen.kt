@@ -76,6 +76,7 @@ fun ActiveRideScreen(
     onCloseHud: () -> Unit
 ) {
     var showFinishDialog by remember { mutableStateOf(false) }
+    var showShortRideDialog by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showBikeSelectDialog by remember { mutableStateOf(false) }
     var simulationToggled by remember { mutableStateOf(false) }
@@ -458,7 +459,11 @@ fun ActiveRideScreen(
                 Button(
                     onClick = {
                         showFinishDialog = false
-                        onFinishTracking()
+                        if (trackingState.elapsedTimeSeconds < 120) {
+                            showShortRideDialog = true
+                        } else {
+                            onFinishTracking()
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = SafetyAmber, contentColor = AsphaltBlack)
                 ) {
@@ -471,6 +476,28 @@ fun ActiveRideScreen(
                 }
             },
             containerColor = CarbonDark
+        )
+    }
+
+    if (showShortRideDialog) {
+        com.ryda.app.ui.components.ShortRideDialog(
+            elapsedTimeSeconds = trackingState.elapsedTimeSeconds,
+            distanceMeters = trackingState.totalDistanceMeters,
+            onContinueRide = {
+                showShortRideDialog = false
+                if (trackingState.isPaused) {
+                    onResumeTracking()
+                }
+            },
+            onDiscardRide = {
+                showShortRideDialog = false
+                onDiscardTracking()
+            },
+            onSaveAnyway = {
+                showShortRideDialog = false
+                onFinishTracking()
+            },
+            onDismissRequest = { showShortRideDialog = false }
         )
     }
 
