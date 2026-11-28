@@ -20,13 +20,14 @@ object RideShareRenderer {
         val h = (template.viewBoxHeight * scaleFactor).toInt()
 
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        bitmap.setHasAlpha(true)
         val canvas = Canvas(bitmap)
         canvas.scale(scaleFactor, scaleFactor)
 
         val primaryColor = Color.parseColor(config.colorTheme.primaryHex)
         val secondaryColor = Color.parseColor(config.colorTheme.secondaryHex)
 
-        val processedPoints = if (points.size > 2) RouteSimplifier.simplifyRoute(points, 0.0001) else points
+        val processedPoints = if (points.size > 2000) RouteSimplifier.simplifyRoute(points, 5.0) else points
         val routeHeader = getRouteHeader(ride, config)
 
         val distStr = String.format(Locale.US, "%.1f", ride.totalDistanceKm)
@@ -45,6 +46,8 @@ object RideShareRenderer {
             } else {
                 canvas.drawColor(Color.parseColor("#12141A"))
                 drawMapGridLines(canvas, template.viewBoxWidth, template.viewBoxHeight)
+                // Draw route on fallback map grid so route is ALWAYS visible!
+                drawRoute(canvas, processedPoints, 30f, 140f, 360f, 200f, strokeW = 6f, primaryColor = primaryColor, secondaryColor = secondaryColor)
             }
 
             // Draw RYDA Watermark Top Right
@@ -55,12 +58,8 @@ object RideShareRenderer {
             return bitmap
         }
 
-        // TRANSPARENT SVG STYLE PIPELINE: Render transparent canvas for SVG vector sharing
-        if (config.colorTheme == ColorTheme.PLAIN_BLACK) {
-            canvas.drawColor(Color.parseColor(config.colorTheme.bgHex))
-        } else {
-            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-        }
+        // TRANSPARENT STYLE PIPELINE (Dedicated transparent rendering with genuine alpha channel)
+        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
         when (template) {
             SvgLayoutTemplate.HERO_DISTANCE -> {
@@ -316,6 +315,9 @@ object RideShareRenderer {
 
             val finishCircle = Paint().apply { color = primaryColor; isAntiAlias = true; style = Paint.Style.FILL }
             canvas.drawCircle(offsets.last().x, offsets.last().y, 7f, finishCircle)
+        } else if (offsets.size == 1) {
+            val singleCircle = Paint().apply { color = primaryColor; isAntiAlias = true; style = Paint.Style.FILL }
+            canvas.drawCircle(offsets[0].x, offsets[0].y, 7f, singleCircle)
         }
     }
 
@@ -345,24 +347,37 @@ object RideShareRenderer {
         height: Float,
         padding: Float
     ): List<Offset> {
-        if (points.isEmpty()) return emptyList()
-        val box = RouteSimplifier.computeBoundingBox(points)
+        val valid = points.filter {
+            it.latitude != 0.0 && it.longitude != 0.0 &&
+            it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0
+        }
+        val targetPoints = if (valid.isNotEmpty()) valid else points
+        if (targetPoints.isEmpty()) return emptyList()
+        val box = RouteSimplifier.computeBoundingBox(targetPoints)
         val latRange = (box.maxLat - box.minLat).coerceAtLeast(0.0001)
         val lonRange = (box.maxLon - box.minLon).coerceAtLeast(0.0001)
 
-        val usableW = width - 2 * padding
-        val usableH = height - 2 * padding
+        val usableW = (width - 2 * padding).coerceAtLeast(10f)
+        val usableH = (height - 2 * padding).coerceAtLeast(10f)
+
+        // Maintain true geographic aspect ratio using mid-latitude cosine
+        val midLatRad = Math.toRadians((box.minLat + box.maxLat) / 2.0)
+        val cosLat = kotlin.math.cos(midLatRad).coerceIn(0.1, 1.0)
+        val adjustedLonRange = lonRange * cosLat
 
         val latScale = usableH / latRange.toFloat()
-        val lonScale = usableW / lonRange.toFloat()
+        val lonScale = usableW / adjustedLonRange.toFloat()
         val scale = minOf(latScale, lonScale)
 
-        val offsetX = left + padding + (usableW - lonRange.toFloat() * scale) / 2f
-        val offsetY = top + padding + (usableH - latRange.toFloat() * scale) / 2f
+        val routeW = (adjustedLonRange * scale).toFloat()
+        val routeH = (latRange * scale).toFloat()
 
-        val offsets = ArrayList<Offset>(points.size)
-        for (p in points) {
-            val x = offsetX + ((p.longitude - box.minLon) * scale).toFloat()
+        val offsetX = left + padding + (usableW - routeW) / 2f
+        val offsetY = top + padding + (usableH - routeH) / 2f
+
+        val offsets = ArrayList<Offset>(targetPoints.size)
+        for (p in targetPoints) {
+            val x = offsetX + (((p.longitude - box.minLon) * cosLat) * scale).toFloat()
             val y = offsetY + ((box.maxLat - p.latitude) * scale).toFloat() // Y grows down
             offsets.add(Offset(x, y))
         }

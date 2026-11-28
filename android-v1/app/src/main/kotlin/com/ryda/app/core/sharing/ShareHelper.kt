@@ -1,5 +1,6 @@
 package com.ryda.app.core.sharing
 
+import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -26,6 +27,7 @@ object ShareHelper {
     ): Uri? = withContext(Dispatchers.IO) {
         try {
             val dir = File(context.cacheDir, "sharing").also { it.mkdirs() }
+            cleanupOldCacheFiles(dir)
             val file = File(dir, filename)
             FileOutputStream(file).use { out ->
                 if (isTransparent) {
@@ -85,11 +87,82 @@ object ShareHelper {
         }
     }
 
+    /**
+     * Saves raw SVG XML to the cache sharing directory without any rasterization or compression.
+     */
+    suspend fun saveSvgToCache(
+        context: Context,
+        svgContent: String,
+        filename: String
+    ): Uri? = withContext(Dispatchers.IO) {
+        try {
+            val dir = File(context.cacheDir, "sharing").also { it.mkdirs() }
+            cleanupOldCacheFiles(dir)
+            val file = File(dir, filename)
+            file.writeText(svgContent, Charsets.UTF_8)
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Saves SVG file to the device Downloads/RYDA directory via MediaStore on Android Q+,
+     * or to the public Downloads/RYDA directory on older Android versions.
+     */
+    suspend fun saveSvgToDownloads(
+        context: Context,
+        svgContent: String,
+        filename: String
+    ): Uri? = withContext(Dispatchers.IO) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, filename)
+                    put(MediaStore.Downloads.MIME_TYPE, "image/svg+xml")
+                    put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/RYDA")
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val resolver = context.contentResolver
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return@withContext null
+                resolver.openOutputStream(uri)?.use { out ->
+                    out.write(svgContent.toByteArray(Charsets.UTF_8))
+                }
+                values.clear()
+                values.put(MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+                uri
+            } else {
+                @Suppress("DEPRECATION")
+                val dir = File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    "RYDA"
+                ).also { it.mkdirs() }
+                val file = File(dir, filename)
+                file.writeText(svgContent, Charsets.UTF_8)
+                Uri.fromFile(file)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    fun shareSvg(
+        context: Context,
+        svgUri: Uri,
+        text: String = "Shared from RYDA \uD83C\uDFCD\uFE0F"
+    ) {
+        shareImage(context, svgUri, mimeType = "image/svg+xml", text = text)
+    }
+
     fun shareToInstagramStory(context: Context, stickerUri: Uri) {
         val instagramPackage = "com.instagram.android"
         if (hasInstagramInstalled(context)) {
             val intent = Intent("com.instagram.share.ADD_TO_STORY").apply {
                 setDataAndType(stickerUri, "image/png")
+                clipData = ClipData.newRawUri("", stickerUri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 `package` = instagramPackage
                 putExtra("source_application", context.packageName)
@@ -115,6 +188,7 @@ object ShareHelper {
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = mimeType
             putExtra(Intent.EXTRA_STREAM, imageUri)
+            clipData = ClipData.newRawUri("", imageUri)
             if (text.isNotBlank()) putExtra(Intent.EXTRA_TEXT, text)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -127,6 +201,13 @@ object ShareHelper {
         val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
             type = "image/*"
             putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+            if (uris.isNotEmpty()) {
+                val clipData = ClipData.newRawUri("", uris[0])
+                for (i in 1 until uris.size) {
+                    clipData.addItem(ClipData.Item(uris[i]))
+                }
+                this.clipData = clipData
+            }
             if (text.isNotBlank()) putExtra(Intent.EXTRA_TEXT, text)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
@@ -160,5 +241,21 @@ object ShareHelper {
             ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_EXTERNAL_STORAGE) ==
                     PackageManager.PERMISSION_GRANTED
         }
+    }
+
+    /**
+     * Purges cached files in the sharing cache folder older than 24 hours.
+     */
+    private fun cleanupOldCacheFiles(dir: File) {
+        try {
+            val files = dir.listFiles() ?: return
+            val maxAgeMs = 24 * 60 * 60 * 1000L
+            val now = System.currentTimeMillis()
+            for (f in files) {
+                if (now - f.lastModified() > maxAgeMs) {
+                    f.delete()
+                }
+            }
+        } catch (_: Exception) {}
     }
 }

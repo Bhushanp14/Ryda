@@ -499,7 +499,7 @@ fun AppNavigation() {
                                 rides.firstOrNull { it.id == selectedRideId }
                                     ?: repository.getRideById(selectedRideId ?: "")
                             }
-                            val points = remember(selectedRideId) {
+                            val points = remember(selectedRideId, showShareStudio) {
                                 selectedRideId?.let { repository.getPointsForRide(it) } ?: emptyList()
                             }
                             val bike = remember(ride, motorcycles) {

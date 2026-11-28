@@ -34,7 +34,7 @@ object RouteSimplifier {
         keep[n - 1] = true
 
         // Use index stack for iterative RDP (prevents StackOverflowError on 50,000+ points)
-        val stack = IntArray(n * 2)
+        var stack = IntArray((n * 4).coerceAtLeast(64))
         var stackTop = 0
         stack[stackTop++] = 0
         stack[stackTop++] = n - 1
@@ -60,6 +60,9 @@ object RouteSimplifier {
 
             if (maxDist > epsilon) {
                 keep[maxIdx] = true
+                if (stackTop + 4 >= stack.size) {
+                    stack = stack.copyOf(stack.size * 2)
+                }
                 stack[stackTop++] = start
                 stack[stackTop++] = maxIdx
                 stack[stackTop++] = maxIdx
@@ -174,13 +177,18 @@ object RouteSimplifier {
     }
 
     fun computeBoundingBox(points: List<GpsPoint>): BoundingBox {
-        if (points.isEmpty()) return BoundingBox(0.0, 1.0, 0.0, 1.0)
+        val validPoints = points.filter {
+            it.latitude != 0.0 && it.longitude != 0.0 &&
+            it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0
+        }
+        val targetPoints = if (validPoints.isNotEmpty()) validPoints else points
+        if (targetPoints.isEmpty()) return BoundingBox(0.0, 1.0, 0.0, 1.0)
         var minLat = Double.MAX_VALUE
         var maxLat = -Double.MAX_VALUE
         var minLon = Double.MAX_VALUE
         var maxLon = -Double.MAX_VALUE
 
-        for (p in points) {
+        for (p in targetPoints) {
             if (p.latitude < minLat) minLat = p.latitude
             if (p.latitude > maxLat) maxLat = p.latitude
             if (p.longitude < minLon) minLon = p.longitude
@@ -193,18 +201,27 @@ object RouteSimplifier {
     fun projectToCanvas(points: List<GpsPoint>, box: BoundingBox, canvasW: Float, canvasH: Float, padding: Float): List<Offset> {
         val latRange = (box.maxLat - box.minLat).coerceAtLeast(0.0001)
         val lonRange = (box.maxLon - box.minLon).coerceAtLeast(0.0001)
-        val usableW = canvasW - 2 * padding
-        val usableH = canvasH - 2 * padding
-        // Maintain aspect ratio
+        val usableW = (canvasW - 2 * padding).coerceAtLeast(10f)
+        val usableH = (canvasH - 2 * padding).coerceAtLeast(10f)
+
+        // Maintain true geographic aspect ratio using mid-latitude cosine
+        val midLatRad = Math.toRadians((box.minLat + box.maxLat) / 2.0)
+        val cosLat = cos(midLatRad).coerceIn(0.1, 1.0)
+        val adjustedLonRange = lonRange * cosLat
+
         val latScale = usableH / latRange.toFloat()
-        val lonScale = usableW / lonRange.toFloat()
+        val lonScale = usableW / adjustedLonRange.toFloat()
         val scale = minOf(latScale, lonScale)
-        val offsetX = padding + (usableW - lonRange.toFloat() * scale) / 2f
-        val offsetY = padding + (usableH - latRange.toFloat() * scale) / 2f
+
+        val routeW = (adjustedLonRange * scale).toFloat()
+        val routeH = (latRange * scale).toFloat()
+
+        val offsetX = padding + (usableW - routeW) / 2f
+        val offsetY = padding + (usableH - routeH) / 2f
 
         val result = ArrayList<Offset>(points.size)
         for (p in points) {
-            val x = offsetX + ((p.longitude - box.minLon) * scale).toFloat()
+            val x = offsetX + (((p.longitude - box.minLon) * cosLat) * scale).toFloat()
             val y = offsetY + ((box.maxLat - p.latitude) * scale).toFloat() // flip Y
             result.add(Offset(x, y))
         }

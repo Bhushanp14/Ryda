@@ -80,7 +80,8 @@ fun RideShareStudioScreen(
     var config by remember {
         mutableStateOf(
             ShareConfig(
-                startLocationName = initialStartName
+                startLocationName = initialStartName,
+                style = GraphicStyle.TRANSPARENT
             )
         )
     }
@@ -88,10 +89,28 @@ fun RideShareStudioScreen(
     var startLocationText by remember { mutableStateOf(config.startLocationName) }
     var destLocationText by remember { mutableStateOf(config.destinationName) }
 
+    val repository = remember { com.ryda.app.data.repository.RydaRepository.getInstance(context) }
+    var activePoints by remember(ride.id, points) {
+        mutableStateOf(if (points.isNotEmpty()) points else repository.getPointsForRide(ride.id))
+    }
+
+    LaunchedEffect(ride.id) {
+        if (activePoints.isEmpty()) {
+            val loaded = withContext(Dispatchers.IO) {
+                repository.ensureGpsPointsLoaded(ride.id)
+            }
+            if (loaded.isNotEmpty()) {
+                activePoints = loaded
+            }
+        }
+    }
+
     var mapSnapshotBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isExporting by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
     var showShareSheet by remember { mutableStateOf(false) }
+    var showFormatDialog by remember { mutableStateOf(false) }
+    var selectedFormat by remember { mutableStateOf(ExportFormat.PNG) }
     var exportedUri by remember { mutableStateOf<Uri?>(null) }
 
     // Accent color used inside the image graphic
@@ -108,7 +127,7 @@ fun RideShareStudioScreen(
         }
     }
 
-    val latLngList = remember(points) { points.map { LatLng(it.latitude, it.longitude) } }
+    val latLngList = remember(activePoints) { activePoints.map { LatLng(it.latitude, it.longitude) } }
 
     val currentTemplate = remember(config.style, config.template) {
         if (config.style == GraphicStyle.MAP_BACKGROUND) SvgLayoutTemplate.HERO_DISTANCE else config.template
@@ -123,14 +142,14 @@ fun RideShareStudioScreen(
         }
     }
 
-    val liveBitmap = remember(ride, points, config, startLocationText, destLocationText, mapSnapshotBitmap) {
+    val liveBitmap = remember(ride, activePoints, config, startLocationText, destLocationText, mapSnapshotBitmap) {
         val finalConfig = config.copy(
             startLocationName = startLocationText,
             destinationName = destLocationText
         )
         RideShareRenderer.renderShareGraphic(
             ride = ride,
-            points = points,
+            points = activePoints,
             config = finalConfig,
             mapBitmap = mapSnapshotBitmap
         )
@@ -143,7 +162,7 @@ fun RideShareStudioScreen(
         }
     }
 
-    fun doExport(saveToGallery: Boolean) {
+    fun doExport(format: ExportFormat, saveToGallery: Boolean) {
         scope.launch {
             isExporting = true
             try {
@@ -151,32 +170,70 @@ fun RideShareStudioScreen(
                     startLocationName = startLocationText,
                     destinationName = destLocationText
                 )
-                val bitmap = withContext(Dispatchers.Default) {
-                    RideShareRenderer.renderShareGraphic(
-                        ride = ride,
-                        points = points,
-                        config = finalConfig,
-                        mapBitmap = mapSnapshotBitmap
-                    )
-                }
 
-                val filename = "ryda_${finalConfig.template.name.lowercase()}_${ride.id.take(8)}_${System.currentTimeMillis()}.png"
-                val uri = if (saveToGallery) {
-                    ShareHelper.saveBitmapToGallery(context, bitmap, filename, isTransparent = false)
-                } else {
-                    ShareHelper.saveBitmapToCache(context, bitmap, filename, isTransparent = false)
-                }
+                when (format) {
+                    ExportFormat.SVG -> {
+                        // GENUINE TRANSPARENT SVG VECTOR PIPELINE
+                        // Direct Kotlin SVG XML generation with no rasterization
+                        val svgContent = withContext(Dispatchers.Default) {
+                            SvgExporter.exportToSvg(
+                                ride = ride,
+                                points = activePoints,
+                                config = finalConfig
+                            )
+                        }
 
-                if (uri != null) {
-                    exportedUri = uri
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    if (saveToGallery) {
-                        exportMessage = "✓ Saved to Photos / RYDA"
-                    } else {
-                        showShareSheet = true
+                        val filename = "ryda_${finalConfig.template.name.lowercase()}_${ride.id.take(8)}_${System.currentTimeMillis()}.svg"
+                        val uri = if (saveToGallery) {
+                            ShareHelper.saveSvgToDownloads(context, svgContent, filename)
+                        } else {
+                            ShareHelper.saveSvgToCache(context, svgContent, filename)
+                        }
+
+                        if (uri != null) {
+                            exportedUri = uri
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (saveToGallery) {
+                                exportMessage = "✓ Saved SVG to Downloads / RYDA"
+                            } else {
+                                showShareSheet = true
+                            }
+                        } else {
+                            exportMessage = "SVG export failed. Check storage permissions."
+                        }
                     }
-                } else {
-                    exportMessage = "Export failed. Check storage permissions."
+                    ExportFormat.PNG -> {
+                        // GENUINE TRANSPARENT PNG RASTER PIPELINE
+                        val isTransparent = finalConfig.style == GraphicStyle.TRANSPARENT
+                        val bitmap = withContext(Dispatchers.Default) {
+                            RideShareRenderer.renderShareGraphic(
+                                ride = ride,
+                                points = activePoints,
+                                config = finalConfig,
+                                mapBitmap = if (isTransparent) null else mapSnapshotBitmap
+                            )
+                        }
+
+                        val stylePrefix = if (isTransparent) "transparent" else "map"
+                        val filename = "ryda_${stylePrefix}_${finalConfig.template.name.lowercase()}_${ride.id.take(8)}_${System.currentTimeMillis()}.png"
+                        val uri = if (saveToGallery) {
+                            ShareHelper.saveBitmapToGallery(context, bitmap, filename, isTransparent = isTransparent)
+                        } else {
+                            ShareHelper.saveBitmapToCache(context, bitmap, filename, isTransparent = isTransparent)
+                        }
+
+                        if (uri != null) {
+                            exportedUri = uri
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (saveToGallery) {
+                                exportMessage = if (isTransparent) "✓ Saved Transparent PNG to Photos / RYDA" else "✓ Saved to Photos / RYDA"
+                            } else {
+                                showShareSheet = true
+                            }
+                        } else {
+                            exportMessage = "PNG export failed. Check storage permissions."
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 exportMessage = "Export error: ${e.message}"
@@ -252,8 +309,11 @@ fun RideShareStudioScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        OutlinedButton(
-                            onClick = { doExport(saveToGallery = true) },
+                        Button(
+                            onClick = {
+                                selectedFormat = ExportFormat.PNG
+                                showFormatDialog = true
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp),
@@ -267,11 +327,15 @@ fun RideShareStudioScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Save to Gallery", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Save to Phone",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
 
                         Button(
-                            onClick = { doExport(saveToGallery = false) },
+                            onClick = { doExport(format = ExportFormat.PNG, saveToGallery = false) },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp),
@@ -302,11 +366,7 @@ fun RideShareStudioScreen(
         ) {
             // Live Preview Container (Dynamically sized to match the image aspect ratio)
             val liveBgColor = remember(config.colorTheme, config.style) {
-                if (config.style == GraphicStyle.TRANSPARENT_SVG) {
-                    Color(android.graphics.Color.parseColor(config.colorTheme.bgHex))
-                } else {
-                    Color(0xFF12141A)
-                }
+                Color(0xFF12141A)
             }
             Box(
                 modifier = Modifier
@@ -478,20 +538,20 @@ fun RideShareStudioScreen(
                 }
             }
 
-            // --- 1. GRAPHIC STYLE SELECTION (Transparent SVG vs Map Route) ---
+            // --- 1. GRAPHIC STYLE SELECTION (Transparent, Map Route) ---
             SectionHeader("GRAPHIC STYLE")
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OptionChip(
-                    label = "1 - Transparent (SVG)",
-                    selected = config.style == GraphicStyle.TRANSPARENT_SVG,
+                    label = "1 - Transparent",
+                    selected = config.style == GraphicStyle.TRANSPARENT,
                     accentColor = uiAccentColor,
                     onClick = {
-                        config = config.copy(style = GraphicStyle.TRANSPARENT_SVG)
+                        config = config.copy(style = GraphicStyle.TRANSPARENT)
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     },
                     modifier = Modifier.weight(1f)
@@ -510,9 +570,9 @@ fun RideShareStudioScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // --- 2. SVG LAYOUT SELECTION (Only shown for Transparent SVG) ---
-            if (config.style == GraphicStyle.TRANSPARENT_SVG) {
-                SectionHeader("SVG LAYOUT TEMPLATE")
+            // --- 2. LAYOUT TEMPLATE SELECTION (Shown for Transparent PNG and SVG) ---
+            if (config.style != GraphicStyle.MAP_BACKGROUND) {
+                SectionHeader("LAYOUT TEMPLATE")
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -662,8 +722,138 @@ fun RideShareStudioScreen(
     }
 
     // Native Share Sheet Modal
+    if (showFormatDialog) {
+        AlertDialog(
+            onDismissRequest = { showFormatDialog = false },
+            title = {
+                Text(
+                    text = "Save to Phone",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color.White
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Select export file format:",
+                        fontSize = 13.sp,
+                        color = TextSecondary
+                    )
+
+                    // Option 1: PNG (Default)
+                    Surface(
+                        onClick = { selectedFormat = ExportFormat.PNG },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (selectedFormat == ExportFormat.PNG) uiAccentColor.copy(alpha = 0.15f) else Color(0xFF1C202B),
+                        border = BorderStroke(
+                            width = if (selectedFormat == ExportFormat.PNG) 1.5.dp else 1.dp,
+                            color = if (selectedFormat == ExportFormat.PNG) uiAccentColor else BorderSubtle
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedFormat == ExportFormat.PNG,
+                                onClick = { selectedFormat = ExportFormat.PNG },
+                                colors = RadioButtonDefaults.colors(selectedColor = uiAccentColor)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "PNG",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Transparent image saved to Photos / Gallery",
+                                    fontSize = 12.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    // Option 2: SVG
+                    Surface(
+                        onClick = { selectedFormat = ExportFormat.SVG },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (selectedFormat == ExportFormat.SVG) uiAccentColor.copy(alpha = 0.15f) else Color(0xFF1C202B),
+                        border = BorderStroke(
+                            width = if (selectedFormat == ExportFormat.SVG) 1.5.dp else 1.dp,
+                            color = if (selectedFormat == ExportFormat.SVG) uiAccentColor else BorderSubtle
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedFormat == ExportFormat.SVG,
+                                onClick = { selectedFormat = ExportFormat.SVG },
+                                colors = RadioButtonDefaults.colors(selectedColor = uiAccentColor)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "SVG",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Vector graphic saved to Downloads / Files",
+                                    fontSize = 12.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val fmt = selectedFormat
+                        showFormatDialog = false
+                        doExport(format = fmt, saveToGallery = true)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = uiAccentColor,
+                        contentColor = AsphaltBlack
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Save", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showFormatDialog = false }
+                ) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            },
+            containerColor = Color(0xFF161920)
+        )
+    }
+
     if (showShareSheet && exportedUri != null) {
         val uri = exportedUri!!
+        val isSvg = uri.toString().endsWith(".svg", ignoreCase = true)
+        val shareMimeType = if (isSvg) "image/svg+xml" else if (config.style == GraphicStyle.TRANSPARENT) "image/png" else "image/jpeg"
         ModalBottomSheet(
             onDismissRequest = { showShareSheet = false },
             containerColor = CarbonDark,
@@ -676,17 +866,17 @@ fun RideShareStudioScreen(
                     .navigationBarsPadding()
             ) {
                 Text(
-                    text = "Share Ride Graphic",
+                    text = if (isSvg) "Share SVG Vector" else if (config.style == GraphicStyle.TRANSPARENT) "Share Transparent Sticker" else "Share Ride Graphic",
                     color = TextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                if (ShareHelper.hasInstagramInstalled(context)) {
+                if (!isSvg && config.style == GraphicStyle.TRANSPARENT && ShareHelper.hasInstagramInstalled(context)) {
                     ShareTargetRow(
-                        title = "Instagram Stories",
-                        subtitle = "Shares graphic directly to Instagram Stories",
+                        title = "Instagram Stories Sticker",
+                        subtitle = "Adds transparent sticker directly to Instagram Stories",
                         icon = Icons.Default.CameraAlt,
                         accentColor = uiAccentColor,
                         onClick = {
@@ -696,25 +886,27 @@ fun RideShareStudioScreen(
                     )
                 }
 
-                ShareTargetRow(
-                    title = "Instagram Feed / Direct",
-                    subtitle = "Share image to Instagram Feed or Direct Message",
-                    icon = Icons.Default.PhotoLibrary,
-                    accentColor = uiAccentColor,
-                    onClick = {
-                        showShareSheet = false
-                        ShareHelper.shareImage(context, uri, "image/png")
-                    }
-                )
+                if (!isSvg) {
+                    ShareTargetRow(
+                        title = "Instagram Feed / Direct",
+                        subtitle = "Share image to Instagram Feed or Direct Message",
+                        icon = Icons.Default.PhotoLibrary,
+                        accentColor = uiAccentColor,
+                        onClick = {
+                            showShareSheet = false
+                            ShareHelper.shareImage(context, uri, shareMimeType)
+                        }
+                    )
+                }
 
                 ShareTargetRow(
                     title = "WhatsApp",
-                    subtitle = "Share with riding groups or status",
+                    subtitle = if (isSvg) "Send SVG vector to chats or groups" else if (config.style == GraphicStyle.TRANSPARENT) "Send transparent sticker to chats" else "Share with riding groups or status",
                     icon = Icons.Default.Chat,
                     accentColor = uiAccentColor,
                     onClick = {
                         showShareSheet = false
-                        ShareHelper.shareImage(context, uri, "image/png")
+                        ShareHelper.shareImage(context, uri, shareMimeType)
                     }
                 )
 
@@ -725,7 +917,7 @@ fun RideShareStudioScreen(
                     accentColor = uiAccentColor,
                     onClick = {
                         showShareSheet = false
-                        ShareHelper.shareImage(context, uri, "image/png")
+                        ShareHelper.shareImage(context, uri, shareMimeType)
                     }
                 )
 

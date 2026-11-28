@@ -12,7 +12,20 @@ enum class SvgLayoutTemplate(
     CLASSIC_CARD("Classic Card", 420, 500)
 }
 
-enum class GraphicStyle { TRANSPARENT_SVG, MAP_BACKGROUND }
+enum class GraphicStyle(val title: String) {
+    TRANSPARENT("Transparent"),
+    MAP_BACKGROUND("Map (Plain Roads)")
+}
+
+enum class ExportFormat(
+    val title: String,
+    val extension: String,
+    val mimeType: String,
+    val description: String
+) {
+    PNG("PNG", "png", "image/png", "Transparent image saved to Photos / Gallery"),
+    SVG("SVG", "svg", "image/svg+xml", "Vector graphic saved to Downloads / Files")
+}
 
 enum class ColorTheme(
     val primaryHex: String,
@@ -29,7 +42,7 @@ enum class ColorTheme(
 
 data class ShareConfig(
     val template: SvgLayoutTemplate = SvgLayoutTemplate.HERO_DISTANCE,
-    val style: GraphicStyle = GraphicStyle.TRANSPARENT_SVG,
+    val style: GraphicStyle = GraphicStyle.TRANSPARENT,
     val colorTheme: ColorTheme = ColorTheme.RYDA_ORANGE,
     val startLocationName: String = "",
     val destinationName: String = "",
