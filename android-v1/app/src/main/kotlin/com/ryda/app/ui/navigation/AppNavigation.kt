@@ -62,6 +62,9 @@ private enum class AppDest {
     MAIN
 }
 
+// Process-level flag tracking if the cold-start ignition splash has already run in this process session
+private var isColdStartDone = false
+
 @Composable
 fun AppNavigation() {
     val context = LocalContext.current
@@ -75,20 +78,30 @@ fun AppNavigation() {
     val permExplainedFlow = tokenDataStore.permissionsExplainedFlow.collectAsState(initial = null)
 
     // ── Destination state ─────────────────────────────────────────────────────
-    var dest by remember { mutableStateOf(AppDest.LOADING) }
+    var dest by remember { mutableStateOf(if (isColdStartDone) AppDest.MAIN else AppDest.LOADING) }
 
     // Once DataStore values are available, pick the right starting screen
     LaunchedEffect(tokenFlow.value, permExplainedFlow.value) {
         val permExplained = permExplainedFlow.value ?: return@LaunchedEffect // still loading
         val token = tokenFlow.value  // null = not logged in
 
-        dest = when {
+        val targetDest = when {
             // Not seen permission explainer yet → show it first (once ever)
             !permExplained -> AppDest.PERMISSION_EXPLAINER
             // No token → go to login
             token == null -> AppDest.LOGIN
             // All good → main app
             else -> AppDest.MAIN
+        }
+
+        if (!isColdStartDone) {
+            // Cold start: Show splash animation for 2 seconds
+            kotlinx.coroutines.delay(2000)
+            isColdStartDone = true
+            dest = targetDest
+        } else {
+            // Warm start / Resume from background: Skip splash completely
+            dest = targetDest
         }
     }
 
