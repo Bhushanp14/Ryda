@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -26,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import com.ryda.app.ui.theme.AsphaltBlack
 import com.ryda.app.ui.theme.CarbonDark
 import com.ryda.app.ui.theme.CrimsonRed
+import com.ryda.app.ui.theme.ElectricCyan
 import com.ryda.app.ui.theme.HeadlineFontFamily
 import com.ryda.app.ui.theme.HighVisLime
 import com.ryda.app.ui.theme.MotoOrange
@@ -56,7 +59,8 @@ import kotlin.math.sin
 
 /**
  * Animated Tachometer Rev-Sweep Splash Screen for Ryda launch.
- * Features 0 -> 12,000 RPM sweep, shift light flash, Ryda brand logo hub, and engine status text.
+ * Features 2.0s duration sequence: 0 -> 12,000 RPM sweep, digital Odometer self-test (00000 -> 88888 -> 00000),
+ * shift light flash, Ryda brand logo hub, and engine status text.
  */
 @Composable
 fun RiderLoadingScreen(
@@ -64,28 +68,37 @@ fun RiderLoadingScreen(
     statusTextOverride: String? = null,
 ) {
     val rpmAnim = remember { Animatable(0f) }
+    var odoSelfTestVal by remember { mutableIntStateOf(0) }
     var shiftLightFlashing by remember { mutableStateOf(false) }
     var statusText by remember { mutableStateOf("INITIALIZING TELEMETRY ENGINE...") }
 
+    val animatedOdoDigits by animateIntAsState(
+        targetValue = odoSelfTestVal,
+        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+        label = "odoSelfTest"
+    )
+
     LaunchedEffect(Unit) {
-        // 1. Initial Sweep 0 -> 12,000 RPM Redline
+        // 1. Initial Sweep 0 -> 12,000 RPM Redline & Odometer 00000 -> 88888
         statusText = "INITIALIZING TELEMETRY ENGINE..."
+        odoSelfTestVal = 88888
         rpmAnim.animateTo(
             targetValue = 12000f,
-            animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing)
         )
 
-        // 2. Shift Light Redline Flash
+        // 2. Shift Light Redline Flash & Odometer Self-Test Reset
         shiftLightFlashing = true
-        delay(250)
-        statusText = "CHECKING GPS SENSORS..."
-        delay(250)
+        statusText = "SYSTEM SELF-TEST OK..."
+        odoSelfTestVal = 0
+        delay(300)
         shiftLightFlashing = false
+        delay(200)
 
         // 3. Settle to Engine Idle (~1,200 RPM)
         rpmAnim.animateTo(
             targetValue = 1200f,
-            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
         )
         statusText = "READY TO RIDE"
     }
@@ -226,7 +239,7 @@ fun RiderLoadingScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Digital RPM Counter Readout
             Text(
@@ -244,7 +257,42 @@ fun RiderLoadingScreen(
                 letterSpacing = 1.5.sp
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Odometer Self-Test Boot Display
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CarbonDark)
+                    .border(1.dp, SafetyAmber.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "ODO: ",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = StatFontFamily
+                    )
+                    Text(
+                        text = String.format(java.util.Locale.getDefault(), "%05d", animatedOdoDigits),
+                        color = ElectricCyan,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = StatFontFamily
+                    )
+                    Text(
+                        text = " KM",
+                        color = TextSecondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = StatFontFamily
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Ignition Status Microcopy
             Text(

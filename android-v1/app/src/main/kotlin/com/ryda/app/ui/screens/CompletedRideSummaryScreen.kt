@@ -659,24 +659,50 @@ private fun RideCompletionCelebrationDialog(
         else -> Triple("RIDE COMPLETE LEGEND! 🏆", "Victory! Ride completed and logged to your profile.", Icons.Default.TwoWheeler)
     }
 
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(1800)
-        onDismiss()
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = CarbonDark,
-        title = {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = CarbonDark),
+            border = BorderStroke(1.dp, BorderSubtle)
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Top Row with Close 'X' Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(SurfaceCard)
+                            .border(1.dp, BorderSubtle, CircleShape)
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Glowing Victory Badge Icon
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(72.dp)
                         .clip(CircleShape)
-                        .background(SafetyAmber.copy(alpha = 0.2f))
+                        .background(SafetyAmber.copy(alpha = 0.18f))
                         .border(2.dp, SafetyAmber, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -684,37 +710,55 @@ private fun RideCompletionCelebrationDialog(
                         imageVector = badgeIcon,
                         contentDescription = null,
                         tint = SafetyAmber,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Title
                 Text(
                     text = title,
                     color = SafetyAmber,
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.5.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
-            }
-        },
-        text = {
-            Text(
-                text = subtitle,
-                color = TextPrimary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = SafetyAmber, contentColor = AsphaltBlack)
-            ) {
-                Text("Awesome!", fontWeight = FontWeight.Bold)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Subtitle
+                Text(
+                    text = subtitle,
+                    color = TextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 18.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Rounded Primary Action Button
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SafetyAmber, contentColor = AsphaltBlack),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Text(
+                        text = "Awesome! View Telemetry",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
-    )
+    }
 }
 
 private fun formatDuration(seconds: Long): String {

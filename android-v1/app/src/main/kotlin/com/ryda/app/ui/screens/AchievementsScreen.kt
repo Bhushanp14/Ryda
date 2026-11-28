@@ -186,7 +186,29 @@ fun AchievementsScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // 4. Achievement List
-        if (filteredAchievements.isEmpty()) {
+        if (response == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    com.ryda.app.ui.components.SpinningRotorLoader(sizeDp = 44)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "LOADING ACHIEVEMENTS...",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = StatFontFamily
+                    )
+                }
+            }
+        } else if (filteredAchievements.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
